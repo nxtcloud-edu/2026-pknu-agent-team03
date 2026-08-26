@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>TimeBack</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E⏱️%3C/text%3E%3C/svg%3E">
+<style>
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
+:root{--bg:#FFFFFF;--bg-card:#FFFFFF;--text:#1A1F36;--text-sub:#6B7280;--accent:#38BDF8;--accent-hover:#0EA5E9;--accent-light:#F0F9FF;--border:#E5E7EB;--green:#34D399;--red:#F87171;--orange:#FBBF24;--purple:#818CF8;--radius:16px;--shadow:0 4px 24px rgba(0,0,0,0.06)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);line-height:1.7;font-size:16px}
+body::before{content:'';position:fixed;top:-200px;right:-200px;width:500px;height:500px;background:radial-gradient(circle,rgba(147,197,253,.12) 0%,transparent 70%);border-radius:50%;pointer-events:none;z-index:-1}
+
+/* Nav */
+nav{position:sticky;top:0;background:rgba(255,255,255,.95);backdrop-filter:blur(10px);z-index:100;border-bottom:1px solid var(--border);padding:14px 0}
+.nav-inner{max-width:680px;margin:0 auto;padding:0 20px;display:flex;justify-content:space-between;align-items:center}
+.logo{font-size:20px;font-weight:800;color:var(--accent)}
+.nav-tabs{display:flex;gap:4px}
+.nav-tabs button{background:none;border:none;padding:8px 14px;font-size:14px;font-weight:600;color:var(--text-sub);cursor:pointer;border-radius:8px;font-family:inherit;transition:all .2s}
+.nav-tabs button:hover{color:var(--accent);background:var(--accent-light)}
+.nav-tabs button.active{color:var(--accent);background:var(--accent-light)}
+
+/* Content */
+.container{max-width:680px;margin:0 auto;padding:24px 20px 60px}
+.page{display:none}.page.active{display:block}
+
+/* Cards */
+.card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;margin-bottom:16px;transition:all .2s}
+.card:hover{box-shadow:var(--shadow)}
+.card h2{font-size:22px;font-weight:800;margin-bottom:16px}
+.card h3{font-size:15px;font-weight:700;color:var(--text-sub);margin-bottom:12px}
+
+/* Stats */
+.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
+.stat{background:var(--accent-light);border-radius:12px;padding:16px;text-align:center}
+.stat .val{font-size:24px;font-weight:800;color:var(--text)}
+.stat .lbl{font-size:12px;color:var(--text-sub);margin-top:2px}
+
+/* Timeline items */
+.tl-list{display:flex;flex-direction:column;gap:6px}
+.tl-row{display:flex;align-items:center;padding:10px 12px;border-radius:10px;cursor:pointer;transition:background .15s;gap:10px}
+.tl-row:hover{background:var(--accent-light)}
+.tl-time{font-size:13px;font-weight:600;color:var(--text-sub);width:50px;flex-shrink:0}
+.tl-info{flex:1;min-width:0}
+.tl-app{font-size:15px;font-weight:700}
+.tl-act{font-size:13px;color:var(--text-sub)}
+.tl-right{display:flex;align-items:center;gap:8px}
+.tl-dur{font-size:13px;font-weight:600;color:var(--text-sub)}
+.cls-tag{font-size:11px;font-weight:700;padding:3px 8px;border-radius:6px;white-space:nowrap}
+.cls-WASTE{background:#FEE2E2;color:#B91C1C}
+.cls-PRODUCTIVE{background:#D1FAE5;color:#065F46}
+.cls-LEISURE{background:#FEF3C7;color:#92400E}
+.cls-MIXED{background:#E0E7FF;color:#3730A3}
+.cls-NEUTRAL{background:#F3F4F6;color:#4B5563}
+
+/* Day tabs */
+.day-row{display:flex;gap:6px;margin-bottom:16px}
+.day-row button{flex:1;padding:8px;border:1px solid var(--border);background:var(--bg-card);border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .2s}
+.day-row button.active{background:var(--accent);color:white;border-color:var(--accent)}
+
+/* App bars */
+.app-row{display:flex;align-items:center;gap:10px;padding:8px 0}
+.app-name{width:80px;font-size:14px;font-weight:600;flex-shrink:0}
+.app-fill{flex:1;height:8px;background:#F3F4F6;border-radius:4px;overflow:hidden}
+.app-fill span{display:block;height:100%;border-radius:4px}
+.app-dur{width:70px;text-align:right;font-size:13px;color:var(--text-sub)}
+
+/* Goals */
+.goal-card{padding:14px 0;border-bottom:1px solid var(--border)}
+.goal-card:last-child{border-bottom:none}
+.goal-top{display:flex;justify-content:space-between;align-items:baseline}
+.goal-name{font-size:16px;font-weight:700}
+.goal-pct{font-size:14px;font-weight:700;color:var(--accent)}
+.goal-sub{font-size:13px;color:var(--text-sub);margin-top:2px}
+.goal-bar{width:100%;height:6px;background:#F3F4F6;border-radius:3px;margin-top:6px;overflow:hidden}
+.goal-bar span{display:block;height:100%;background:linear-gradient(90deg,#38BDF8,#7DD3FC);border-radius:3px}
+.goal-btns{display:flex;gap:6px;margin-top:8px}
+.goal-btns button{padding:5px 10px;border:1px solid var(--border);background:var(--bg-card);border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s}
+.goal-btns button:hover{border-color:var(--accent);color:var(--accent)}
+.goal-btns .del{color:var(--red)}
+.goal-btns .del:hover{border-color:var(--red)}
+
+/* Add form */
+.add-row{display:flex;gap:8px;margin-bottom:16px}
+.add-row input{flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit}
+.add-row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(56,189,248,.15)}
+.add-row button{padding:10px 18px;background:linear-gradient(135deg,#93C5FD,#60A5FA);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit;transition:all .2s;box-shadow:0 2px 12px rgba(96,165,250,.3)}
+.add-row button:hover{background:linear-gradient(135deg,#60A5FA,#3B82F6);transform:translateY(-1px)}
+
+/* Report chart */
+.chart{display:flex;align-items:end;gap:8px;height:100px;margin-top:12px}
+.chart-col{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px}
+.chart-bar{width:100%;border-radius:4px}
+.chart-label{font-size:11px;color:var(--text-sub)}
+
+/* Settings */
+.setting-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--border)}
+.setting-row:last-child{border-bottom:none}
+.setting-label{font-size:15px;font-weight:600}
+.setting-val{font-size:14px;color:var(--text-sub)}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.35);display:none;align-items:center;justify-content:center;z-index:200}
+.modal-bg.show{display:flex}
+.modal{background:var(--bg-card);border-radius:var(--radius);padding:28px;width:min(380px,90%);box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.modal h3{font-size:18px;margin-bottom:4px}
+.modal p{font-size:14px;color:var(--text-sub);margin-bottom:16px}
+.modal select{width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:15px;font-family:inherit;margin-bottom:16px}
+.modal-btns{display:flex;gap:8px}
+.modal-btns button{flex:1;padding:10px;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit}
+.modal-btns .confirm{background:var(--accent);color:white}
+.modal-btns .cancel{background:#F3F4F6;color:var(--text)}
+
+@media(max-width:500px){.stats{grid-template-columns:1fr 1fr}.nav-tabs button{padding:6px 10px;font-size:12px}}
+</style>
+</head>
+<body>
+<nav>
+  <div class="nav-inner">
+    <div class="logo">TimeBack</div>
+    <div class="nav-tabs">
+      <button data-page="home" class="active">홈</button>
+      <button data-page="timeline">타임라인</button>
+      <button data-page="apps">앱</button>
+      <button data-page="goals">목표</button>
+      <button data-page="report">리포트</button>
+      <button data-page="settings">설정</button>
+    </div>
+  </div>
+</nav>
+
+<div class="container">
+  <div id="page-home" class="page active"></div>
+  <div id="page-timeline" class="page"></div>
+  <div id="page-apps" class="page"></div>
+  <div id="page-goals" class="page"></div>
+  <div id="page-report" class="page"></div>
+  <div id="page-settings" class="page"></div>
+</div>
+
+<div class="modal-bg" id="classify-modal">
+  <div class="modal">
+    <h3>항목 수정</h3>
+    <p id="modal-label" style="margin-bottom:12px"></p>
+    <label style="font-size:13px;font-weight:600;color:var(--text-sub);display:block;margin-bottom:4px">활동 설명</label>
+    <input id="modal-activity" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:10px;font-size:14px;font-family:inherit;margin-bottom:12px">
+    <label style="font-size:13px;font-weight:600;color:var(--text-sub);display:block;margin-bottom:4px">분류</label>
+    <select id="modal-select">
+      <option value="WASTE">낭비</option>
+      <option value="PRODUCTIVE">생산</option>
+      <option value="LEISURE">여가</option>
+      <option value="MIXED">혼합</option>
+      <option value="NEUTRAL">중립</option>
+    </select>
+    <div class="modal-btns">
+      <button class="confirm" onclick="confirmClassify()">변경</button>
+      <button class="cancel" onclick="closeModal()">취소</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const API='';
+const DAYS=['월','화','수','목','금','토','일'];
+let currentDay=new Date().getDay();  // JS: 일=0,월=1...토=6 → 변환 필요
+currentDay = currentDay === 0 ? 6 : currentDay - 1;  // → 월=0...일=6
+let classifyTarget=null;
+
+function fmt(min){const h=Math.floor(min/60),m=min%60;return h>0?`${h}시간${m>0?' '+m+'분':''}`:`${m}분`;}
+function clsName(c){return{WASTE:'낭비',PRODUCTIVE:'생산',LEISURE:'여가',MIXED:'혼합',NEUTRAL:'중립'}[c]||c;}
+
+async function api(url,opts={}){const r=await fetch(API+url,{headers:{'Content-Type':'application/json'},...opts});return r.json();}
+
+// HOME
+async function renderHome(){
+  const m=await api('/api/metrics/weekly');
+  const tl=await api(`/api/timeline?day=${currentDay}`);
+  const dayName=DAYS[currentDay];
+  document.getElementById('page-home').innerHTML=`
+    <div class="card">
+      <h2>오늘의 요약 (${dayName}요일)</h2>
+      <div class="stats">
+        <div class="stat"><div class="val">${fmt(m.todayTotalMin)}</div><div class="lbl">전체 스크린타임</div></div>
+        <div class="stat"><div class="val">${fmt(m.todayWasteMin)}</div><div class="lbl">낭비</div></div>
+        <div class="stat"><div class="val">${fmt(m.savedMin)}</div><div class="lbl">확보</div></div>
+        <div class="stat"><div class="val">${fmt(m.recoveredMin)}</div><div class="lbl">회수된 시간</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>타임라인 (${dayName}요일)</h3>
+      ${renderTL(tl.items)}
+    </div>`;
+}
+
+function renderTL(items){
+  return `<div class="tl-list">${items.map(i=>{
+    const d=new Date(i.startAt);
+    const t=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    return `<div class="tl-row" onclick="openClassify('${i.id}','${i.app}','${i.activity.replace(/'/g,"\\'")}','${i.classification}')">
+      <span class="tl-time">${t}</span>
+      <div class="tl-info"><div class="tl-app">${i.app}</div><div class="tl-act">${i.activity}</div></div>
+      <div class="tl-right"><span class="cls-tag cls-${i.classification}">${clsName(i.classification)}</span><span class="tl-dur">${fmt(i.durationMin)}</span></div>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+// TIMELINE
+async function renderTimeline(){
+  const tl=await api(`/api/timeline?day=${currentDay}`);
+  document.getElementById('page-timeline').innerHTML=`
+    <div class="card">
+      <h2>일간 타임라인</h2>
+      <div class="day-row">${DAYS.map((d,i)=>`<button class="${i===currentDay?'active':''}" onclick="selectDay(${i})">${d}</button>`).join('')}</div>
+      ${renderTL(tl.items)}
+      <p style="font-size:12px;color:var(--text-sub);margin-top:12px">항목을 탭하면 분류를 변경할 수 있습니다</p>
+    </div>`;
+}
+
+// APPS
+async function renderApps(){
+  const data=await api('/api/timeline/all');
+  const map={};
+  data.days.forEach(day=>day.forEach(i=>{if(!map[i.app])map[i.app]={name:i.app,dur:0,cls:i.classification};map[i.app].dur+=i.durationMin;}));
+  const apps=Object.values(map).sort((a,b)=>b.dur-a.dur);
+  const max=apps[0]?.dur||1;
+  document.getElementById('page-apps').innerHTML=`
+    <div class="card">
+      <h2>앱별 사용량</h2>
+      <h3>이번 주 전체</h3>
+      ${apps.map(a=>{
+        const pct=Math.round(a.dur/max*100);
+        const c={WASTE:'var(--red)',PRODUCTIVE:'var(--green)',LEISURE:'var(--orange)',MIXED:'var(--purple)',NEUTRAL:'#9CA3AF'}[a.cls]||'#9CA3AF';
+        return `<div class="app-row"><span class="app-name">${a.name}</span><div class="app-fill"><span style="width:${pct}%;background:${c}"></span></div><span class="app-dur">${fmt(a.dur)}</span></div>`;
+      }).join('')}
+    </div>`;
+}
+
+// GOALS
+async function renderGoals(){
+  const goals=await api('/api/goals');
+  document.getElementById('page-goals').innerHTML=`
+    <div class="card">
+      <h2>목표 관리</h2>
+      <div class="add-row">
+        <input id="gname" placeholder="새 목표 이름">
+        <input id="gtarget" type="number" placeholder="분" style="width:70px">
+        <button onclick="addGoal()">추가</button>
+      </div>
+      ${goals.map(g=>{
+        const pct=Math.min(100,Math.round(g.doneMin/g.targetMin*100));
+        return `<div class="goal-card">
+          <div class="goal-top"><span class="goal-name">${g.name}</span><span class="goal-pct">${pct}%</span></div>
+          <div class="goal-sub">${fmt(g.doneMin)} / ${fmt(g.targetMin)}</div>
+          <div class="goal-bar"><span style="width:${pct}%"></span></div>
+          <div class="goal-btns">
+            <button onclick="recordGoal('${g.id}',15)">+15분</button>
+            <button onclick="recordGoal('${g.id}',30)">+30분</button>
+            <button onclick="recordGoal('${g.id}',60)">+1시간</button>
+            <button onclick="recordGoal('${g.id}',-15)">-15분</button>
+            <button onclick="recordGoal('${g.id}',-30)">-30분</button>
+            <button class="del" onclick="deleteGoal('${g.id}')">삭제</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+
+// REPORT
+async function renderReport(){
+  const m=await api('/api/metrics/weekly');
+  const maxW=Math.max(...m.dailyWaste);
+  document.getElementById('page-report').innerHTML=`
+    <div class="card">
+      <h2>주간 리포트</h2>
+      <div class="stats">
+        <div class="stat"><div class="val">${fmt(m.totalWasteMin)}</div><div class="lbl">주간 낭비</div></div>
+        <div class="stat"><div class="val">${fmt(m.totalProductiveMin)}</div><div class="lbl">주간 생산</div></div>
+        <div class="stat"><div class="val">${fmt(m.recoveredMin)}</div><div class="lbl">회수된 시간</div></div>
+        <div class="stat"><div class="val">${fmt(m.savedMin)}</div><div class="lbl">주간 확보</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>일별 낭비시간</h3>
+      <div class="chart">${m.dailyWaste.map((w,i)=>`<div class="chart-col"><div class="chart-bar" style="height:${Math.round(w/maxW*80)}px;background:${w>maxW*.7?'var(--red)':'var(--orange)'}"></div><span class="chart-label">${DAYS[i]}</span></div>`).join('')}</div>
+    </div>
+    <div class="card">
+      <h3>Baseline</h3>
+      <p style="font-size:15px;color:var(--text-sub)">일평균 낭비: <strong>${fmt(m.baselineMin)}</strong> | 오늘 확보: <strong style="color:var(--green)">${fmt(m.savedMin)}</strong></p>
+    </div>`;
+}
+
+// SETTINGS
+async function renderSettings(){
+  const b=await api('/api/backup/status');
+  const r=await api('/api/retention');
+  document.getElementById('page-settings').innerHTML=`
+    <div class="card">
+      <h2>설정</h2>
+      <div class="setting-row"><span class="setting-label">백업 상태</span><span class="setting-val" style="color:var(--green)">${b.status}</span></div>
+      <div class="setting-row"><span class="setting-label">마지막 동기화</span><span class="setting-val">${new Date(b.lastSyncAt).toLocaleString('ko')}</span></div>
+      <div class="setting-row"><span class="setting-label">대기 중</span><span class="setting-val">${b.pendingCount}건</span></div>
+      <div class="setting-row">
+        <span class="setting-label">보관 기간</span>
+        <select onchange="changeRetention(this.value)" style="padding:6px 10px;border:1px solid var(--border);border-radius:8px;font-family:inherit;font-size:14px">
+          <option value="7_DAYS" ${r.selection==='7_DAYS'?'selected':''}>7일</option>
+          <option value="30_DAYS" ${r.selection==='30_DAYS'?'selected':''}>30일</option>
+          <option value="90_DAYS" ${r.selection==='90_DAYS'?'selected':''}>90일</option>
+          <option value="UNLIMITED" ${r.selection==='UNLIMITED'?'selected':''}>무제한</option>
+        </select>
+      </div>
+    </div>
+    <div class="card" style="border-color:#FCA5A5">
+      <h3 style="color:var(--red)">전체 삭제</h3>
+      <p style="font-size:14px;color:var(--text-sub);margin-bottom:12px">기기와 서버 데이터를 모두 삭제합니다. 되돌릴 수 없습니다.</p>
+      <button onclick="requestDeletion()" style="padding:10px 20px;background:var(--red);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">전체 삭제 요청</button>
+    </div>`;
+}
+
+// ACTIONS
+function selectDay(d){currentDay=d;renderTimeline();}
+function openClassify(id,app,activity,cls){classifyTarget=id;document.getElementById('modal-label').textContent=app;document.getElementById('modal-activity').value=activity;document.getElementById('modal-select').value=cls;document.getElementById('classify-modal').classList.add('show');}
+function closeModal(){document.getElementById('classify-modal').classList.remove('show');}
+async function confirmClassify(){const cls=document.getElementById('modal-select').value;const activity=document.getElementById('modal-activity').value.trim();await api(`/api/timeline/${classifyTarget}/classify`,{method:'PUT',body:JSON.stringify({classification:cls,activity:activity})});closeModal();renderAll();}
+async function addGoal(){const n=document.getElementById('gname').value.trim(),t=parseInt(document.getElementById('gtarget').value)||60;if(!n)return alert('목표 이름을 입력하세요');await api('/api/goals',{method:'POST',body:JSON.stringify({name:n,targetMin:t})});renderGoals();renderHome();renderReport();}
+async function recordGoal(id,min){await api(`/api/goals/${id}/record`,{method:'PUT',body:JSON.stringify({minutes:min})});renderGoals();renderHome();renderReport();}
+async function deleteGoal(id){if(!confirm('삭제할까요?'))return;await api(`/api/goals/${id}`,{method:'DELETE'});renderGoals();renderReport();}
+async function changeRetention(v){await api('/api/retention',{method:'PUT',body:JSON.stringify({selection:v})});}
+async function requestDeletion(){if(!confirm('정말 모든 데이터를 삭제할까요?'))return;const r=await api('/api/deletion',{method:'POST'});alert(`삭제 완료 (기기: ${r.deviceStatus}, 서버: ${r.serverStatus})`);}
+
+// NAV
+document.querySelectorAll('.nav-tabs button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('.nav-tabs button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+    document.getElementById('page-'+btn.dataset.page).classList.add('active');
+  });
+});
+
+function renderAll(){renderHome();renderTimeline();renderApps();renderGoals();renderReport();renderSettings();}
+renderAll();
+</script>
+</body>
+</html>
