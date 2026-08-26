@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "Validate TimeBack Markdown",
+      "trigger": "PostFileSave",
+      "description": "목적: 저장된 Markdown과 Kiro 설정 문서의 기본 구조 손상을 조기에 발견한다. 역할: PostFileSave에서 Markdown 경로를 읽기 전용 검증 스크립트에 전달한다. 사용 흐름: .md 저장 감지 → workspace 내부 경로 확인 → NUL·병합 충돌 표식 검사 → steering/SKILL.md frontmatter 검사 → 통과 또는 오류 결과를 출력한다. 파일은 자동 수정하지 않는다.",
+      "matcher": "\\.md$",
+      "action": {
+        "type": "command",
+        "command": "powershell.exe -NoLogo -NoProfile -NonInteractive -File \".kiro\\scripts\\validate-markdown.ps1\" -FilePath \"{{filePath}}\"",
+        "timeout": 15
+      }
+    }
+  ]
+}
