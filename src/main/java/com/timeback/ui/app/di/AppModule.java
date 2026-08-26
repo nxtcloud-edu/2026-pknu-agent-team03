@@ -1,8 +1,14 @@
 package com.timeback.ui.app.di;
 
 import android.content.Context;
+import com.timeback.BuildConfig;
+import com.timeback.backup.http.RetrofitBackupBoundary;
+import com.timeback.backup.port.BackupBoundary;
 import com.timeback.device.contract.UsageAccessGateway;
+import com.timeback.device.contract.DeviceDataAuthority;
 import com.timeback.device.os.AndroidUsageAccessGateway;
+import com.timeback.device.room.RoomDeviceDataAuthority;
+import com.timeback.device.room.TimeBackRoomDatabase;
 import com.timeback.ui.domain.gateway.FeatureGateway;
 import com.timeback.ui.integration.ProductionFeatureGateway;
 
@@ -24,6 +30,24 @@ public class AppModule {
     @Singleton
     public UsageAccessGateway provideUsageAccessGateway(@ApplicationContext Context context) {
         return new AndroidUsageAccessGateway(context);
+    }
+
+    @Provides
+    @Singleton
+    public TimeBackRoomDatabase provideRoomDatabase(@ApplicationContext Context context) {
+        return TimeBackRoomDatabase.create(context);
+    }
+
+    @Provides
+    @Singleton
+    public DeviceDataAuthority provideDeviceDataAuthority(TimeBackRoomDatabase database) {
+        return new RoomDeviceDataAuthority(database);
+    }
+
+    @Provides
+    @Singleton
+    public BackupBoundary provideBackupBoundary() {
+        return new RetrofitBackupBoundary(BuildConfig.TIMEBACK_BACKUP_BASE_URL);
     }
 
     @Provides

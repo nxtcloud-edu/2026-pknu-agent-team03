@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "timeback-mvp"
-include(":device-core", ":domain", ":backup", ":app")
+include(":device-core", ":domain", ":backup", ":server", ":app")

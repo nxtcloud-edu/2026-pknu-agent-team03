@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>TimeBack</title>
+<title>TimeBack 합성 데이터 데모</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22%3E%3Ctext y=%22.9em%22 font-size=%2290%22%3E⏱️%3C/text%3E%3C/svg%3E">
 <style>
 @import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css');
@@ -118,7 +118,7 @@ nav{position:sticky;top:0;background:rgba(255,255,255,.95);backdrop-filter:blur(
 <body>
 <nav>
   <div class="nav-inner">
-    <div class="logo">TimeBack</div>
+    <div class="logo">TimeBack Demo</div>
     <div class="nav-tabs">
       <button data-page="home" class="active">홈</button>
       <button data-page="timeline">타임라인</button>
@@ -131,6 +131,10 @@ nav{position:sticky;top:0;background:rgba(255,255,255,.95);backdrop-filter:blur(
 </nav>
 
 <div class="container">
+  <div class="card" style="border-color:#FDE68A;background:#FFFBEB">
+    <strong>합성 데이터 데모</strong>
+    <p style="font-size:13px;color:var(--text-sub);margin-top:4px">이 화면은 실제 Android 기기·Room·백업 서버 상태가 아닙니다.</p>
+  </div>
   <div id="page-home" class="page active"></div>
   <div id="page-timeline" class="page"></div>
   <div id="page-apps" class="page"></div>
@@ -161,7 +165,7 @@ nav{position:sticky;top:0;background:rgba(255,255,255,.95);backdrop-filter:blur(
 </div>
 
 <script>
-const API='';
+const API='/demo-api';
 const DAYS=['월','화','수','목','금','토','일'];
 let currentDay=new Date().getDay();  // JS: 일=0,월=1...토=6 → 변환 필요
 currentDay = currentDay === 0 ? 6 : currentDay - 1;  // → 월=0...일=6
@@ -169,13 +173,20 @@ let classifyTarget=null;
 
 function fmt(min){const h=Math.floor(min/60),m=min%60;return h>0?`${h}시간${m>0?' '+m+'분':''}`:`${m}분`;}
 function clsName(c){return{WASTE:'낭비',PRODUCTIVE:'생산',LEISURE:'여가',MIXED:'혼합',NEUTRAL:'중립'}[c]||c;}
+function esc(value){return String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+function enc(value){return encodeURIComponent(String(value)).replace(/'/g,'%27');}
 
-async function api(url,opts={}){const r=await fetch(API+url,{headers:{'Content-Type':'application/json'},...opts});return r.json();}
+async function api(url,opts={}){
+  const r=await fetch(API+url,{headers:{'Content-Type':'application/json'},...opts});
+  const data=await r.json();
+  if(!r.ok)throw new Error(data.detail||data.error||`HTTP ${r.status}`);
+  return data;
+}
 
 // HOME
 async function renderHome(){
-  const m=await api('/api/metrics/weekly');
-  const tl=await api(`/api/timeline?day=${currentDay}`);
+  const m=await api('/metrics/weekly');
+  const tl=await api(`/timeline?day=${currentDay}`);
   const dayName=DAYS[currentDay];
   document.getElementById('page-home').innerHTML=`
     <div class="card">
@@ -197,9 +208,9 @@ function renderTL(items){
   return `<div class="tl-list">${items.map(i=>{
     const d=new Date(i.startAt);
     const t=`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-    return `<div class="tl-row" onclick="openClassify('${i.id}','${i.app}','${i.activity.replace(/'/g,"\\'")}','${i.classification}')">
+    return `<div class="tl-row" onclick="openClassify(decodeURIComponent('${enc(i.id)}'),decodeURIComponent('${enc(i.app)}'),decodeURIComponent('${enc(i.activity)}'),decodeURIComponent('${enc(i.classification)}'))">
       <span class="tl-time">${t}</span>
-      <div class="tl-info"><div class="tl-app">${i.app}</div><div class="tl-act">${i.activity}</div></div>
+      <div class="tl-info"><div class="tl-app">${esc(i.app)}</div><div class="tl-act">${esc(i.activity)}</div></div>
       <div class="tl-right"><span class="cls-tag cls-${i.classification}">${clsName(i.classification)}</span><span class="tl-dur">${fmt(i.durationMin)}</span></div>
     </div>`;
   }).join('')}</div>`;
@@ -207,7 +218,7 @@ function renderTL(items){
 
 // TIMELINE
 async function renderTimeline(){
-  const tl=await api(`/api/timeline?day=${currentDay}`);
+  const tl=await api(`/timeline?day=${currentDay}`);
   document.getElementById('page-timeline').innerHTML=`
     <div class="card">
       <h2>일간 타임라인</h2>
@@ -219,7 +230,7 @@ async function renderTimeline(){
 
 // APPS
 async function renderApps(){
-  const data=await api('/api/timeline/all');
+  const data=await api('/timeline/all');
   const map={};
   data.days.forEach(day=>day.forEach(i=>{if(!map[i.app])map[i.app]={name:i.app,dur:0,cls:i.classification};map[i.app].dur+=i.durationMin;}));
   const apps=Object.values(map).sort((a,b)=>b.dur-a.dur);
@@ -238,7 +249,7 @@ async function renderApps(){
 
 // GOALS
 async function renderGoals(){
-  const goals=await api('/api/goals');
+  const goals=await api('/goals');
   document.getElementById('page-goals').innerHTML=`
     <div class="card">
       <h2>목표 관리</h2>
@@ -250,7 +261,7 @@ async function renderGoals(){
       ${goals.map(g=>{
         const pct=Math.min(100,Math.round(g.doneMin/g.targetMin*100));
         return `<div class="goal-card">
-          <div class="goal-top"><span class="goal-name">${g.name}</span><span class="goal-pct">${pct}%</span></div>
+          <div class="goal-top"><span class="goal-name">${esc(g.name)}</span><span class="goal-pct">${pct}%</span></div>
           <div class="goal-sub">${fmt(g.doneMin)} / ${fmt(g.targetMin)}</div>
           <div class="goal-bar"><span style="width:${pct}%"></span></div>
           <div class="goal-btns">
@@ -268,8 +279,8 @@ async function renderGoals(){
 
 // REPORT
 async function renderReport(){
-  const m=await api('/api/metrics/weekly');
-  const maxW=Math.max(...m.dailyWaste);
+  const m=await api('/metrics/weekly');
+  const maxW=Math.max(1,...m.dailyWaste);
   document.getElementById('page-report').innerHTML=`
     <div class="card">
       <h2>주간 리포트</h2>
@@ -292,12 +303,12 @@ async function renderReport(){
 
 // SETTINGS
 async function renderSettings(){
-  const b=await api('/api/backup/status');
-  const r=await api('/api/retention');
+  const b=await api('/backup/status');
+  const r=await api('/retention');
   document.getElementById('page-settings').innerHTML=`
     <div class="card">
       <h2>설정</h2>
-      <div class="setting-row"><span class="setting-label">백업 상태</span><span class="setting-val" style="color:var(--green)">${b.status}</span></div>
+      <div class="setting-row"><span class="setting-label">데모 백업 상태</span><span class="setting-val" style="color:var(--orange)">${esc(b.status)}</span></div>
       <div class="setting-row"><span class="setting-label">마지막 동기화</span><span class="setting-val">${new Date(b.lastSyncAt).toLocaleString('ko')}</span></div>
       <div class="setting-row"><span class="setting-label">대기 중</span><span class="setting-val">${b.pendingCount}건</span></div>
       <div class="setting-row">
@@ -312,8 +323,8 @@ async function renderSettings(){
     </div>
     <div class="card" style="border-color:#FCA5A5">
       <h3 style="color:var(--red)">전체 삭제</h3>
-      <p style="font-size:14px;color:var(--text-sub);margin-bottom:12px">기기와 서버 데이터를 모두 삭제합니다. 되돌릴 수 없습니다.</p>
-      <button onclick="requestDeletion()" style="padding:10px 20px;background:var(--red);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">전체 삭제 요청</button>
+      <p style="font-size:14px;color:var(--text-sub);margin-bottom:12px">서버의 합성 데모 데이터만 삭제합니다. Android 기기 데이터는 앱에서 별도로 삭제해야 합니다.</p>
+      <button onclick="requestDeletion()" style="padding:10px 20px;background:var(--red);color:white;border:none;border-radius:10px;font-size:14px;font-weight:700;cursor:pointer;font-family:inherit">데모 서버 데이터 삭제</button>
     </div>`;
 }
 
@@ -321,12 +332,12 @@ async function renderSettings(){
 function selectDay(d){currentDay=d;renderTimeline();}
 function openClassify(id,app,activity,cls){classifyTarget=id;document.getElementById('modal-label').textContent=app;document.getElementById('modal-activity').value=activity;document.getElementById('modal-select').value=cls;document.getElementById('classify-modal').classList.add('show');}
 function closeModal(){document.getElementById('classify-modal').classList.remove('show');}
-async function confirmClassify(){const cls=document.getElementById('modal-select').value;const activity=document.getElementById('modal-activity').value.trim();await api(`/api/timeline/${classifyTarget}/classify`,{method:'PUT',body:JSON.stringify({classification:cls,activity:activity})});closeModal();renderAll();}
-async function addGoal(){const n=document.getElementById('gname').value.trim(),t=parseInt(document.getElementById('gtarget').value)||60;if(!n)return alert('목표 이름을 입력하세요');await api('/api/goals',{method:'POST',body:JSON.stringify({name:n,targetMin:t})});renderGoals();renderHome();renderReport();}
-async function recordGoal(id,min){await api(`/api/goals/${id}/record`,{method:'PUT',body:JSON.stringify({minutes:min})});renderGoals();renderHome();renderReport();}
-async function deleteGoal(id){if(!confirm('삭제할까요?'))return;await api(`/api/goals/${id}`,{method:'DELETE'});renderGoals();renderReport();}
-async function changeRetention(v){await api('/api/retention',{method:'PUT',body:JSON.stringify({selection:v})});}
-async function requestDeletion(){if(!confirm('정말 모든 데이터를 삭제할까요?'))return;const r=await api('/api/deletion',{method:'POST'});alert(`삭제 완료 (기기: ${r.deviceStatus}, 서버: ${r.serverStatus})`);}
+async function confirmClassify(){const cls=document.getElementById('modal-select').value;const activity=document.getElementById('modal-activity').value.trim();await api(`/timeline/${classifyTarget}/classify`,{method:'PUT',body:JSON.stringify({classification:cls,activity:activity})});closeModal();renderAll();}
+async function addGoal(){const n=document.getElementById('gname').value.trim(),t=parseInt(document.getElementById('gtarget').value)||60;if(!n)return alert('목표 이름을 입력하세요');await api('/goals',{method:'POST',body:JSON.stringify({name:n,targetMin:t})});renderGoals();renderHome();renderReport();}
+async function recordGoal(id,min){await api(`/goals/${id}/record`,{method:'PUT',body:JSON.stringify({minutes:min})});renderGoals();renderHome();renderReport();}
+async function deleteGoal(id){if(!confirm('삭제할까요?'))return;await api(`/goals/${id}`,{method:'DELETE'});renderGoals();renderReport();}
+async function changeRetention(v){await api('/retention',{method:'PUT',body:JSON.stringify({selection:v})});}
+async function requestDeletion(){if(!confirm('서버의 합성 데모 데이터를 삭제할까요?'))return;const r=await api('/deletion',{method:'POST'});alert(`삭제 결과 (기기: ${r.deviceStatus}, 서버: ${r.serverStatus})\nAndroid 기기 삭제는 앱에서 별도 확인이 필요합니다.`);renderAll();}
 
 // NAV
 document.querySelectorAll('.nav-tabs button').forEach(btn=>{

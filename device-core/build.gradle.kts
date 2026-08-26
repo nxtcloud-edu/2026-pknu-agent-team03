@@ -13,6 +13,7 @@ sourceSets {
         java.setSrcDirs(listOf("../src/main/java"))
         java.include("com/timeback/device/**")
         java.exclude("com/timeback/device/os/Android*.java")
+        java.exclude("com/timeback/device/room/**")
     }
     test {
         java.setSrcDirs(listOf("../src/test/java"))
