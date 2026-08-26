@@ -395,3 +395,175 @@ GOAL_A_START
 - 실제 병렬 작업과 CP-1 이후 통합
 
 따라서 CP-0 승인 뒤에도 CONSTRUCTION STEP 01 전체는 `진행 중`이다.
+
+## Track Detail — device-data
+
+이 섹션은 `track-device-data`의 STEP 01 상세 기능 설계다. 아래 `DataOwnerScope`, `ReplacePeriodRecords`, `ChangeCursor`, `CommittedChangePage`는 CT-03에 필요한 변경 제안이며 공통 계약 승인 전에는 다른 트랙의 확정 입력으로 간주하지 않는다.
+
+### 책임 경계
+
+| 제공 경계 | 입력 | 출력 | 소비자 |
+|---|---|---|---|
+| APP-01 Access Gate | OS-01의 현재 권한 상태 | `AccessState`, 설정 이동 결과, 보호 기능 진입 허용 여부 | UI-01, APP-03 |
+| APP-03 Usage Collection | 사용자 범위, 수집 창, OS-02 사건, OS-05 현재 시각 | 저장된 원본 UsageEvent, `CollectionResult` | APP-04, APP-11, UI 새로고침 흐름 |
+| APP-04 Session Reconstruction | 저장된 UsageEvent, OS-03 화면 종료 사건, OS-05 기간 경계 | 완성 AppSession, 열린 후보 상태, `ReconstructionResult` | 도메인 트랙 APP-07, APP-10, APP-11 |
+| APP-11 Device Data Authority | 사용자 범위와 기준·파생 레코드 명령 | 원자 저장 결과, 기간 조회, 변경 통지 페이지 제안 | APP-03–APP-10, APP-12–APP-13 |
+
+- OS 경계는 Android 상태와 사건을 읽을 뿐 업무 레코드를 저장하거나 세션을 만들지 않는다.
+- APP-03은 원본 사건을 보존하지만 세션을 판정하지 않는다.
+- APP-04는 원본을 수정하지 않고 파생 AppSession만 교체한다.
+- APP-11은 도메인 의미를 재판정하지 않고 요청된 원자 변경과 조회·변경 통지를 제공한다.
+
+### DF-01 — Usage Access 확인과 진입 제한
+
+```text
+ReadAccessState 또는 보호 기능 진입
+  → APP-01이 OS-01에서 현재 권한을 읽음
+  ├─ GRANTED: AccessState.canCollect=true
+  ├─ NOT_GRANTED: BLOCKED(PERMISSION_REQUIRED), OS-02 미호출
+  └─ 조회 실패: FAILURE, 이전 관측값으로 허용을 가정하지 않음
+
+OpenUsageAccessSettings
+  → APP-01이 OS-01에 설정 이동 요청
+  → 이동 성공은 권한 허용 성공이 아님
+  → 앱 복귀 시 RefreshAccessState로 현재 상태를 새로 읽음
+```
+
+- APP-01은 권한 상태를 저장된 영구 사실로 취급하지 않고 `observedAt`이 있는 현재 관측값으로 제공한다.
+- 권한이 회수되면 다음 보호 기능 진입 또는 새로고침에서 즉시 수집을 차단한다. 이미 저장된 기준 데이터는 지우지 않는다.
+- UI-01의 최종 주요 화면 진입 가능 여부는 APP-01 권한 준비와 APP-02 익명 식별자 준비를 함께 조립한 결과다. APP-01은 식별자 상태를 대신 판정하지 않는다.
+- 추적: FR-1.1–FR-1.2, NFR-3.3, NFR-4.1, US-01, OS-01, APP-01, UI-01.
+
+### DF-02 — 원본 UsageEvent 증분 수집
+
+```text
+CollectUsageEvents(DataOwnerScope, requestedWindow)
+  → APP-01 현재 권한 확인
+  ├─ 미허용·조회 실패: 수집 종료, OS-02·APP-11 미호출
+  └─ 허용
+       → APP-03이 마지막 성공 CollectionCheckpoint와 요청 창으로 effectiveWindow 결정
+       → OS-02.queryEvents(effectiveWindow)
+       → 허용된 Foreground·Background 관련 사건만 UsageEvent로 변환
+       → APP-11에 원본 사건과 새 체크포인트를 한 원자 묶음으로 확정
+          ├─ 성공: 새 사건 CommittedChange 제공, CollectionResult 반환
+          └─ 실패: 사건·체크포인트 모두 미확정, 같은 창 재시도 가능
+```
+
+#### 수집 창과 체크포인트
+
+- `requestedWindow`는 시작 포함·종료 미포함이며 종료는 OS-05의 현재 시각을 넘을 수 없다.
+- `CollectionCheckpoint`는 마지막으로 성공 확정한 조회 경계다. 조회 성공만으로 진행하지 않고 원본 사건 저장과 같은 원자 경계에서 진행한다.
+- 최초 설치에서 과거 어느 시점까지 요청할지는 요구사항에 수치가 없으므로 이 단계에서 만들지 않는다. 호출자는 승인된 보관·초기화 정책 안의 창을 제공해야 한다.
+- 경계 사건의 중복·누락을 막기 위해 재조회가 겹칠 수 있으며, APP-11은 APP-03이 만든 안정적인 `eventId` 기준으로 같은 원본 사건을 중복 생성하지 않는다. 실제 ID 생성 방식은 STEP 02 이후 정한다.
+- 사건이 하나도 없어도 조회와 체크포인트 확정이 성공했다면 `CollectionResult`는 성공·신규 사건 0으로 반환한다. 기존 사건을 삭제하지 않는다.
+
+#### 수집 최소화와 실패
+
+- UsageEvent 업무 필드는 패키지명, 허용 사건 종류, 발생 시각이고 앱이 생성하는 식별자·소유자·수집 시각만 메타데이터로 더한다.
+- 화면 내용, 앱 내부 콘텐츠, YouTube 내부 구분, 위치, 자동 오프라인 활동은 요청·변환·저장·결과 어디에도 넣지 않는다.
+- OS-02 조회 실패는 저장과 체크포인트를 바꾸지 않는 `RETRYABLE_FAILURE` 또는 `FAILURE`다. 구체적인 재시도 가능 오류 매핑은 비기능 설계에서 정한다.
+- 추적: FR-1.3–FR-1.4, FR-10.5, NFR-3.3, NFR-4.1, NFR-4.4, NFR-5.1, US-02, OS-02, OS-05, APP-03, APP-11.
+
+### DF-03 — AppSession 재구성
+
+#### 처리 순서
+
+```text
+ReconstructSessions(DataOwnerScope, affectedWindow)
+  → APP-11에서 영향 창의 UsageEvent와 직전 열린 후보를 읽음
+  → OS-03에서 영향 창의 화면 종료 사건을 읽음
+  → occurredAt, 같은 시각의 원본 조회 순서로 사건을 결정적으로 정렬
+  → 사건을 순서대로 접음
+       Foreground(package)
+         ├─ 다른 앱 후보 열림: 현재 시각으로 이전 후보 종료
+         └─ 열린 후보 없음: 해당 앱 후보 시작
+       matching Background(package): 해당 후보 종료
+       ScreenEnd: 모든 열린 후보를 화면 종료 시각으로 종료
+       근거 없는 Background: 원본은 유지하되 세션을 합성하지 않음
+  → 종료된 논리 세션을 OS-05 현지 자정마다 분할
+  → APP-11 ReplacePeriodRecords로 영향 AppSession을 원자 교체
+  → 완성 세션과 아직 열린 후보를 구분한 ReconstructionResult 반환
+```
+
+#### 종료 근거와 열린 후보
+
+- 같은 패키지의 유효한 Background가 다음 전환·화면 종료보다 먼저 있으면 그 사건으로 닫는다.
+- OS-02 사건과 OS-03 화면 종료가 같은 시각이면 OS-02의 원본 순서를 먼저 적용한 뒤 화면 종료로 남은 후보를 닫는다. 같은 시각에 시작·종료된 기간 0 후보는 완성 세션에서 제외한다.
+- 짝 Background가 없으면 다음 다른 앱 Foreground 또는 화면 종료 중 먼저 관찰된 사건으로 닫는다.
+- 닫을 근거가 조회 창 안에 없으면 완성 AppSession을 만들지 않고 `OpenSessionCandidate`로 다음 재구성에 넘긴다.
+- 시작 시각과 같거나 앞선 종료 근거로 기간 0 이하 세션을 만들지 않는다. 근거 사건은 원본으로 남기고 결과에서 제외 이유를 구분한다.
+- 같은 앱의 중복 Foreground는 원본으로 보존하되 이미 열린 후보를 중복 AppSession으로 만들지 않는다.
+- MVP의 단일 전면 앱 세션 모델로 명확히 해석할 수 없는 다중 창 사건은 원본을 보존한다. Android 14 이상 실제 사건 매핑의 지원 범위는 STEP 02·실기기 검증에서 확정한다.
+
+#### 자정 분할과 저장
+
+- 종료된 논리 세션이 하나 이상의 현지 자정을 지나면 OS-05가 반환한 모든 자정 경계에서 분할한다.
+- 각 조각은 시작 포함·종료 미포함이며 `duration=endAt-startAt`이다.
+- 현지 하루를 고정 24시간으로 가정하지 않고 OS-05가 해당 시간대에서 돌려준 절대 경계를 사용한다.
+- 모든 조각의 기간 합은 분할 전 논리 세션 기간과 같고 각 조각은 같은 근거 `sourceEventIds`를 유지한다.
+- 재구성은 영향 기간의 완전한 결과를 `ReplacePeriodRecords`로 교체한다. 저장 실패 시 기존 완성 결과와 열린 후보를 그대로 유지하고 부분 결과를 노출하지 않는다.
+- 추적: FR-2.1–FR-2.4, NFR-2.2, NFR-3.1, NFR-5.1, US-03, OS-03, OS-05, APP-04, APP-11.
+
+### DF-04 — APP-11 기기 기준 저장·조회·변경 통지
+
+아래 원자 교체와 변경 커서는 현재 CT-03의 빈 구현 경계를 채우기 위한 제안이다. `track-domain-engine`과 `track-backup-server`의 검토를 거쳐 단일 STEP 01 게이트에서 확정한다.
+
+#### 명령 처리
+
+1. 모든 요청에서 `DataOwnerScope`와 엔터티 식별자를 검증한다.
+2. 레코드 종류별 필수 식별자·시간 구간·소유 관계를 검증하되 Context나 지표 업무 규칙을 다시 계산하지 않는다.
+3. `SaveRecord`, `SaveRecords`, `ReplacePeriodRecords`, `DeleteScope`의 변경 집합을 계산한다.
+4. 기준 레코드와 같은 변경 집합의 `CommittedChange`를 한 원자 경계에서 확정한다.
+5. 성공 결과에는 확정 변경과 다음 `ChangeCursor`를 제공한다. 실패면 기준 레코드·변경 커서 모두 이전 상태다.
+
+`ReplacePeriodRecords`는 지정 사용자·엔터티·영향 기간의 기존 파생 레코드와 새 완전 결과를 비교해 생성·수정·삭제 변경을 함께 확정한다. 원본 UsageEvent에는 이 동작을 사용하지 않는다.
+
+#### 조회와 변경 통지
+
+- `ReadRecord`와 `ReadPeriod`는 요청 사용자 범위만 읽는다.
+- 기간 레코드는 시작 포함·종료 미포함 구간과 겹치는 대상을 반환하고, 소비자가 요구한 정렬 기준을 결과 계약에 명시한다.
+- `ReadCommittedChanges(cursor)`는 커서 뒤 확정 변경을 순서대로 반환하며 응답의 `nextCursor`는 마지막 반환 위치다.
+- 같은 커서 재조회는 같은 논리 변경을 다시 반환할 수 있으므로 소비자는 커서를 성공적으로 인계한 뒤에만 진행한다. APP-12는 이 결과로 자체 `BackupChange.changeId`를 안정적으로 만든다.
+- 읽을 변경이 없으면 `EMPTY`와 같은 커서를 반환하며 기준 데이터나 백업 상태를 바꾸지 않는다.
+
+#### 삭제 경계
+
+- 기간·엔터티 삭제는 승인된 사용자 범위 안에서만 수행하고 삭제된 기준 레코드별 변경을 생성한다.
+- 전체 삭제는 APP-13이 확정한 삭제 의도를 입력으로 받아 모든 기준 엔터티를 한 기기 작업으로 제거한다. APP-11 성공은 기기 경계 완료만 뜻하며 서버 전체 삭제 완료를 뜻하지 않는다.
+- 삭제 실패는 삭제되지 않은 상태를 성공으로 통지하지 않는다. 물리 저장 제품이 원자 전체 삭제를 제공하지 못할 때의 복구 패턴은 STEP 03에서 정한다.
+
+### 논리 검증 사례
+
+| 사례 ID | 고정 입력 | 기대 결과 | 추적 |
+|---|---|---|---|
+| `DD-ACCESS-01` | 미허용 권한 | `PERMISSION_REQUIRED`, OS-02 미호출, 주요 기능 차단 | US-01 |
+| `DD-ACCESS-02` | 설정 이동 뒤 허용으로 바뀐 권한 | 복귀 재조회 뒤에만 수집 가능 | US-01 |
+| `DD-ACCESS-03` | 허용 후 회수 | 다음 보호 진입부터 차단, 기존 로컬 데이터 유지 | US-01 |
+| `DD-ACCESS-04` | OS-01 권한 조회 실패 | 이전 허용 관측 사용 금지, OS-02 미호출 | US-01 |
+| `DD-COLLECT-01` | 허용 권한과 Foreground·Background 사건 | 승인 필드의 UsageEvent만 원자 저장 | US-02 |
+| `DD-COLLECT-02` | 화면·콘텐츠·위치 정보를 포함하려는 대역 | 금지 정보가 요청·레코드·변경 결과에 없음 | US-02 |
+| `DD-COLLECT-03` | 빈 조회 결과 | 성공·신규 0, 체크포인트 진행, 기존 사건 유지 | US-02 |
+| `DD-COLLECT-04` | 사건 조회 성공과 저장 실패 | 사건·체크포인트 미변경, 재시도 가능 | US-02 |
+| `DD-COLLECT-05` | 같은 경계 사건이 포함된 겹친 재조회 | 같은 `eventId`는 한 원본 레코드 | US-02 |
+| `DD-COLLECT-06` | OS-02 사건 조회 실패 | 저장·체크포인트 미변경, 기존 데이터 유지 | US-02 |
+| `DD-SESSION-01` | 짝 Foreground·Background | 실제 시작·종료·기간과 두 근거 사건을 가진 세션 | US-03 |
+| `DD-SESSION-02` | 열린 A와 다음 B Foreground | A를 B 시작 시각으로 닫음 | US-03 |
+| `DD-SESSION-03` | 열린 A와 화면 종료 | A를 화면 종료 시각으로 닫음 | US-03 |
+| `DD-SESSION-04` | 닫을 근거 없는 열린 A | 완성 세션 없음, 열린 후보 유지 | US-03 |
+| `DD-SESSION-05` | 현지 자정을 지나는 세션 | 자정 분할, 조각 합계가 원 기간과 동일 | US-03, NFR-2.2 |
+| `DD-DATA-01` | 한 묶음 중 하나의 저장 실패 | 기준 레코드·CommittedChange 모두 전혀 변경 없음 | NFR-3.2 |
+| `DD-DATA-02` | 사용자 A 범위로 사용자 B 식별자 조회 | 결과 미노출, 범위 위반 실패 | NFR-4.2 |
+| `DD-DATA-03` | 변경 3개와 두 번째 뒤 커서 | 세 번째 변경만 반환, 누락 없는 다음 커서 | CT-03 |
+| `DD-DATA-04` | 기존 파생 레코드와 새 영향 기간 결과 | 잔여 레코드 없이 전부 교체 또는 이전 상태 유지 | NFR-2.3 |
+
+`DD-ACCESS-*`, `DD-COLLECT-*`, `DD-SESSION-*`는 가짜 OS 경계로 자동 검증한다. 실제 Android 14 이상 기기의 허용·거부·회수·앱 전환 사건은 NFR-3.3 실기기 검증으로 별도 실행하며, 실행 전에는 통과로 기록하지 않는다.
+
+### 다른 트랙 전달 결과와 현재 중지점
+
+| 소비 트랙 | 전달 결과 | 소비 시 지켜야 할 경계 |
+|---|---|---|
+| `track-domain-engine` | 완성 AppSession, 기간 조회, 원자 파생 교체 | 열린 후보를 완성 세션으로 계산하지 않음 |
+| `track-ui` | `AccessState`, 수집·재구성 새로고침 결과와 오류 분류 | 권한 허용과 설정 이동 성공을 같은 상태로 보지 않음 |
+| `track-backup-server` | 사용자 범위와 순서를 보존하는 변경 통지 페이지 제안 | CT-03 합의 뒤 로컬 커서 진행과 원격 백업 성공 커서를 구분 |
+
+이 문장을 작성한 시점에는 `track-device-data`의 STEP 01 상세만 완료 후보로 두었다. 이후 팀의 트랙별 병렬 진행 방식이 확인되어 공식 UOW 게이트와 별개로 device-data의 STEP 02–05 기여를 진행했으며, 최신 상태는 `functional-design/tracks/track-device-data.md` §13을 따른다.
