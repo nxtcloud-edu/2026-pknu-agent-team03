@@ -467,3 +467,159 @@ CT-05의 동작 기준은 `business-logic-model.md` §6이다.
 - Context 확인 의미의 내부 분류 매핑
 - Baseline 재산정 제안 생성 기준과 보관 기간 선택지 목록
 - 트랙별 코드 구조와 구현 클래스
+
+## Track Data — device-data
+
+이 섹션은 `track-device-data`의 논리 모델과 CT-03 변경 제안을 소유한다. 제안 항목은 `track-domain-engine`·`track-backup-server` 검토와 단일 STEP 01 게이트 전에는 CP-0 공통 계약을 대체하지 않는다.
+
+### 트랙 전용 논리 형식과 상태
+
+| 이름 | 의미 | 허용 값·경계 |
+|---|---|---|
+| `DataOwnerScope` | 한 APP-11 명령·조회가 접근할 변환된 익명 사용자 범위 | 값 없음 또는 다른 사용자 범위로 암묵 전환 불가 |
+| `ChangeCursor` | 사용자별 확정 변경 위치를 잇는 불투명 값 | 최초 읽기만 값 없음 허용; 소비자가 내부 구조를 해석하지 않음 |
+| `UsageAccessStatus` | APP-01의 현재 OS-01 관측 결과 | `GRANTED`, `NOT_GRANTED` |
+| `LogicalUsageEventType` | APP-03이 승인된 Android 사건을 정규화한 종류 | `FOREGROUND`, `BACKGROUND` |
+
+`TimeBoundaryContext`는 OS-05가 제공하는 `observedAt`, 불투명한 `localTimeZone`, 요청한 기간 의미, 그 의미를 변환한 절대 `PeriodQuery`를 가진다. 소비자는 현지 날짜를 고정 24시간으로 바꾸지 않고 이 절대 경계를 사용한다.
+
+| 오류 제안 | 의미 | 대표 소비자 |
+|---|---|---|
+| `OS_ACCESS_FAILURE` | 현재 Usage Access 상태를 읽거나 설정 화면을 열지 못함 | APP-01, UI-01 |
+| `USAGE_SOURCE_FAILURE` | 승인된 수집 창의 UsageEvent 조회를 완료하지 못함 | APP-03, UI-02·UI-03 새로고침 |
+| `OWNER_SCOPE_VIOLATION` | 요청 사용자 범위와 대상 레코드의 소유 범위가 일치하지 않음 | APP-11 소비자 |
+
+UsageEvent의 `eventType`은 OS-02의 Android 사건을 `LogicalUsageEventType`으로 정규화한 값이다. 구체 Android 상수 매핑은 후속 기술 설계가 소유한다.
+
+### CT-03 변경 제안
+
+| 제안 | 근거 | 영향받는 소비자·검증 |
+|---|---|---|
+| 모든 CT-03 요청의 `DataOwnerScope` | 사용자 필드가 없는 AppSession 등도 다른 익명 사용자와 섞이지 않아야 함 | 도메인·백업 트랙, `DD-DATA-02` |
+| `ReplacePeriodRecords` 원자 명령 | 재구성·재계산 뒤 사라진 파생 레코드가 잔류하지 않아야 함 | 도메인 트랙 APP-07–APP-09, `DD-DATA-04` |
+| `CommittedChange`의 `anonymousUserId`, `changePosition` | APP-12가 사용자별 변경을 누락 없이 이어 읽어야 함 | 백업 트랙 APP-12, `DD-DATA-03` |
+| `CommitResult.nextChangeCursor`, `CommittedChangePage` | 성공한 변경과 소비 위치를 분리해 재시도를 안전하게 해야 함 | 백업 트랙 APP-12, `DD-DATA-03` |
+
+`CommittedChangePage`는 `anonymousUserId`, 확정 순서의 `changes`, 마지막 반환 변경 뒤 `nextCursor`를 가진다. 같은 입력 커서 재조회는 아직 인계하지 못한 변경을 건너뛰지 않는다. `CollectionCheckpoint`와 `OpenSessionCandidate`는 사용자 범위 로컬 제어 상태이며 일반 `EntityType`이나 백업 대상이 아니지만 기기 전체 삭제에는 포함한다.
+
+### 권한·수집 모델
+
+#### `AccessState`
+
+| 필드 | 필수 | 의미 |
+|---|---|---|
+| `usageAccessStatus` | 예 | OS-01에서 방금 관측한 `UsageAccessStatus` |
+| `observedAt` | 예 | OS-05 기준 관측 시각 |
+| `canCollect` | 예 | 현재 관측에서 OS-02 호출이 허용되는지 여부 |
+
+OS-01 조회 자체의 실패는 임의의 `UsageAccessStatus` 값이 아니라 `OperationResult` 또는 `QueryResult`의 `OS_ACCESS_FAILURE`로 표현한다.
+
+#### `SourceUsageEvent`
+
+OS-02가 APP-03에 제공하는 경계 값이며 아직 기준 UsageEvent가 아니다.
+
+| 필드 | 필수 | 의미 |
+|---|---|---|
+| `packageName` | 예 | Android가 제공한 패키지명 |
+| `eventType` | 예 | 승인된 Foreground·Background 관련 원본 사건 종류 |
+| `occurredAt` | 예 | 사건 발생 시각 |
+| `sourceOrder` | 예 | 같은 조회 결과 안에서 Android 경계가 제공한 원본 순서 |
+
+`sourceOrder`는 결정적 처리용 조회 메타데이터이며 화면·콘텐츠 정보가 아니다. APP-03은 이 값과 사건 필드로 안정적인 `eventId`를 만들 수 있어야 하지만 생성 알고리즘은 여기서 정하지 않는다.
+
+#### `CollectionWindow`와 `CollectionCheckpoint`
+
+| 모델 | 필드 | 의미 |
+|---|---|---|
+| `CollectionWindow` | `requestedRange`, `effectiveRange` | 호출자가 요청한 범위와 체크포인트를 적용해 실제 조회한 시작 포함·종료 미포함 범위 |
+| `CollectionCheckpoint` | `anonymousUserId`, `lastSuccessfulEnd` | 원본 사건 저장까지 성공한 마지막 수집 경계 |
+
+체크포인트는 사용자 범위의 로컬 제어 상태다. 서버 백업 사본이나 시간 지표 입력이 아니며 원본 사건 저장과 같은 원자 경계에서만 진행한다.
+
+#### `CollectionResult`
+
+| 필드 | 필수 | 의미 |
+|---|---|---|
+| `window` | 예 | 요청·실제 수집 창 |
+| `newEventCount` | 예 | 이번 확정에서 새로 저장된 UsageEvent 수 |
+| `duplicateEventCount` | 예 | 겹친 재조회에서 이미 존재해 새로 만들지 않은 사건 수 |
+| `checkpoint` | 예 | 성공 뒤의 체크포인트 |
+| `completedAt` | 예 | 수집과 로컬 확정 완료 시각 |
+
+빈 조회 성공은 `newEventCount=0`인 성공 결과다. 조회·저장 실패에서는 새 체크포인트를 제공하지 않는다.
+
+### 세션 재구성 모델
+
+#### `ScreenEndEvent`
+
+| 필드 | 필수 | 의미 |
+|---|---|---|
+| `occurredAt` | 예 | OS-03이 관측한 화면 종료 시각 |
+| `sourceOrder` | 예 | 같은 시각 사건 사이의 경계 순서 |
+
+화면 내용이나 종료 전 표시 앱 정보는 포함하지 않는다.
+
+#### `OpenSessionCandidate`
+
+| 필드 | 필수 | 의미 |
+|---|---|---|
+| `anonymousUserId` | 예 | 후보 소유 사용자 범위 |
+| `packageName` | 예 | 열린 앱 패키지명 |
+| `startAt` | 예 | Foreground 시작 시각 |
+| `sourceEventIds` | 예 | 현재까지 후보가 참조한 원본 사건 식별자 |
+
+종료 근거가 없는 처리 상태이며 완성 AppSession, Timeline 항목 또는 시간 지표 입력이 아니다. 다음 재구성 성공에서 닫히거나 다른 후보로 교체될 때까지 사용자 범위 로컬 상태로 유지한다.
+
+#### `ReconstructionResult`
+
+| 필드 | 필수 | 의미 |
+|---|---|---|
+| `affectedWindow` | 예 | 다시 읽고 교체한 원본·세션 영향 범위 |
+| `completedSessions` | 예 | 자정 분할까지 끝나 APP-11에 확정된 AppSession 목록 |
+| `openCandidate` | 아니요 | 종료 근거가 없어 다음 실행으로 넘긴 후보 |
+| `ignoredEventIds` | 예 | 근거 없는 Background·중복 Foreground 등 세션을 만들지 않은 원본 사건 |
+| `completedAt` | 예 | 교체 성공 시각 |
+
+`ignoredEventIds`는 원본 사건 삭제를 뜻하지 않는다. 저장 실패에서는 새 결과를 성공으로 제공하지 않는다.
+
+### APP-11 사용자 범위와 기간 조회 모델
+
+#### `DataOwnerScope`
+
+| 필드 | 필수 | 의미 |
+|---|---|---|
+| `anonymousUserId` | 예 | APP-02가 제공한 변환된 익명 식별자 |
+
+원본 하드웨어 값은 이 범위에 포함하지 않는다. 모든 레코드는 명령 인자의 `DataOwnerScope` 안에서 소유 관계를 갖고, 레코드에 사용자 필드가 없더라도 저장 경계가 소유 범위를 보존한다.
+
+#### 기간 조회 포함 기준
+
+| 엔터티 종류 | `ReadPeriod` 포함 기준 |
+|---|---|
+| UsageEvent | `occurredAt`이 조회 구간 안에 있음 |
+| AppSession·Activity·Context·RecoveredTime | 레코드의 TimeRange가 조회 구간과 겹침 |
+| Baseline | 관찰 범위가 조회 구간과 겹치거나 해당 기간 계산에 사용되는 확정 기준 |
+| User·App·Goal | 기간 조회 대신 식별자·목록 조회 사용 |
+
+기본 정렬은 사건·구간 시작 시각 오름차순이며 같은 시각의 안정적인 순서는 소비자 계약이 요구할 때 보존한다. 물리 정렬 키는 후속 단계에서 결정한다.
+
+### 기기 데이터 새로고침 결과
+
+`DeviceDataRefreshResult`는 UI가 계산하지 않고 APP-03·APP-04의 로컬 갱신 결과를 구분해 표시하기 위한 기능 결과다.
+
+| 필드 | 필수 | 의미 |
+|---|---|---|
+| `accessState` | 예 | 갱신 직전 현재 권한 관측 |
+| `collectionResult` | 성공 시 | 수집 창과 신규 사건 수 |
+| `reconstructionResult` | 성공 시 | 확정 세션과 열린 후보 상태 |
+| `dataFreshnessAt` | 성공 시 | 로컬 수집·재구성이 완료된 시각 |
+| `status` | 예 | `SUCCESS`, `BLOCKED`, `RETRYABLE_FAILURE`, `FAILURE` |
+| `error` | 실패·차단 시 | 공통 상태 이유 분류 |
+
+새 사건 수가 영이어도 갱신 성공이면 `SUCCESS`다. UI는 이 결과의 수를 시간 지표로 해석하지 않고 APP-10 조회를 다시 요청한다.
+
+### 후속 기술 단계로 넘기는 항목
+
+- Android 사건 상수와 `LogicalUsageEventType`의 구체 매핑
+- 안정적인 `eventId`·`sessionId`·`ChangeCursor` 생성·표현 방식
+- 최초 수집 과거 범위, 조회 페이지 크기와 물리 정렬·동시성 방식
