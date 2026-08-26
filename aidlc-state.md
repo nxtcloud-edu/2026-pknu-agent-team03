@@ -26,7 +26,7 @@
 - 실제 어댑터: APP-11 Room/WAL, CT-05 Retrofit, SRV-01–SRV-03 Spring Boot/H2.
 - 자동 검증: `./gradlew --no-daemon verifyAll`에서 92개 device·domain·backup·UI·Room·HTTP·웹 데모 통합 회귀를 실행한다.
 - 설치·실행 산출물: debug APK와 Spring Boot 실행 JAR, Docker Compose 정의.
-- PR #8 웹 화면: Spring `demo` 프로필과 `/demo-api/**`의 합성 데이터 전용 경계. Python/Flask 런타임 제거.
+- PR #8 웹 화면: Spring `demo` 프로필과 `/demo-api/**`의 반응형 합성 데이터 전용 경계. Python/Flask·외부 CDN 제거, loading·error·empty·재시도·복원 상태 포함.
 - 미검증 경계: OS-04 실제 식별원, Android 14 이상 Usage Access·UsageEvent, Docker 데몬 컨테이너 실행, release HTTPS 주소·인증서.
 
 ## 다음 허용 행동

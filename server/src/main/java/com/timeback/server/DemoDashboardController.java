@@ -148,6 +148,12 @@ final class DemoDashboardController {
         return state.deleteSyntheticServerData();
     }
 
+    @PostMapping("/reset")
+    Map<String, String> resetSyntheticData() {
+        state.reset();
+        return Map.of("status", "RESET");
+    }
+
     private static ResponseStatusException badRequest(String reason) {
         return new ResponseStatusException(HttpStatus.BAD_REQUEST, reason);
     }
