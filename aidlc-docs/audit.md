@@ -149,3 +149,15 @@
 - 실행 검증: `demo` 프로필 실행 JAR 포트 18081에서 정적 화면 200, Timeline 7건, 삭제의 기기 대기·서버 완료를 확인했다.
 - 종료 판정: `unit-of-work.md`에는 CONSTRUCTION STEP 07이 없으며, 실기기 부재 시 수동 체크리스트와 NFR-3.3 미완료 상태를 남기는 STEP 06 조건을 충족했다.
 - 최종 상태: `CONSTRUCTION_COMPLETE_WITH_DEVICE_FOLLOWUP`. OS-04·NFR-3.3·Docker daemon 실행·release HTTPS는 후속 외부 환경 검증으로 유지한다.
+
+## 2026-08-26 — 웹 합성 대시보드 안정화·UI 개선
+
+- 선행 계획: 소스 수정 전에 `construction/plans/timeback-web-dashboard-improvement-plan.md`를 작성하고 독립 커밋했다.
+- 유지 경계: Spring `demo` 프로필과 `/demo-api/**`만 변경했고 production `/api/**`, Android Room, CT-05 계약은 변경하지 않았다.
+- 화면 개선: 1120px 데스크톱 그리드, 390px 모바일 반응형, page별 loading·error·empty 상태, toast·재시도·연결 상태를 추가했다.
+- 접근성: skip link, ARIA tab/tabpanel/dialog/live region, 화살표 탭 이동, 실제 button Timeline, modal focus 복원을 적용했다.
+- 동작 개선: 목표 입력 선검증·진행 상태, Timeline 수정, 합성 동기화, 보관 기간 실패 복원, 삭제 뒤 `/demo-api/reset` 데이터 복원을 추가했다.
+- 독립 실행: 외부 Pretendard CDN을 제거해 Spring 실행 JAR만으로 정적 화면을 제공한다.
+- 자동 검증: `verifyAll` 92개, Android clean test·assembleDebug·lintDebug, root·Docker server bootJar가 통과했다.
+- 브라우저 검증: 목표 추가, Timeline 수정, 1280px·390px 무가로오버플로, 연결 실패·재시도, 삭제 뒤 빈 상태·복원에서 콘솔 오류가 없었다.
+- 상세 증거: `construction/timeback-mvp/build-test/web-dashboard-improvement-report.md`.

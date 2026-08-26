@@ -42,7 +42,14 @@ class DemoDashboardIntegrationTest {
     void staticDashboardAndTimelineAreServedByTheDemoProfile() throws Exception {
         ResponseEntity<String> page = http.getForEntity(url("/demo/index.html"), String.class);
         assertThat(page.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(page.getBody()).contains("합성 데이터 데모", "const API='/demo-api'");
+        assertThat(page.getBody()).contains(
+                "TimeBack 합성 데이터 대시보드",
+                "const API='/demo-api'",
+                "id=\"error-banner\"",
+                "data-action=\"reset-demo\"",
+                "role=\"tablist\""
+        );
+        assertThat(page.getBody()).doesNotContain("@import url", "https://cdn.jsdelivr.net");
 
         JsonNode timeline = getJson("/demo-api/timeline?day=0");
         assertThat(timeline.get("items").size()).isEqualTo(7);
@@ -120,6 +127,16 @@ class DemoDashboardIntegrationTest {
                 .allSatisfy(day -> assertThat(day.size()).isZero());
         assertThat(getJson("/demo-api/backup/status").get("status").asText())
                 .isEqualTo("DEMO_DELETED");
+
+        ResponseEntity<String> reset = http.postForEntity(
+                url("/demo-api/reset"),
+                null,
+                String.class
+        );
+        assertThat(reset.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(json.readTree(reset.getBody()).get("status").asText()).isEqualTo("RESET");
+        assertThat(getJson("/demo-api/goals").size()).isEqualTo(4);
+        assertThat(getJson("/demo-api/timeline?day=0").get("items").size()).isEqualTo(7);
     }
 
     private JsonNode getJson(String path) throws Exception {

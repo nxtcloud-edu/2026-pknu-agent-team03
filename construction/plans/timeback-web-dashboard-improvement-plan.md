@@ -23,14 +23,14 @@
 
 ## 3. 구현 순서
 
-- [ ] HTML을 skip link, 상태 배너, 접근 가능한 탭, toast, dialog 구조로 보강한다.
-- [ ] CSS를 1120px 데스크톱 그리드와 태블릿·모바일 breakpoints로 재구성한다.
-- [ ] JavaScript를 단일 상태·페이지별 renderer·공통 loading/error/empty 처리로 정리한다.
-- [ ] Goal 추가·기록, Timeline 분류, 보관 기간, 합성 동기화의 진행·결과 상태를 표시한다.
-- [ ] 합성 데이터 삭제 후 `/demo-api/reset`으로 시연 데이터를 복원할 수 있게 한다.
-- [ ] 기본 프로필 데모 API 차단과 실제 `/api/**` 백업 계약은 변경하지 않는다.
-- [ ] Spring 통합 테스트, 전체 `verifyAll`, Android clean build·lint를 통과시킨다.
-- [ ] 브라우저에서 데스크톱·모바일 화면, 탭 이동, 입력, 오류·빈 상태를 검증한다.
+- [x] HTML을 skip link, 상태 배너, 접근 가능한 탭, toast, dialog 구조로 보강한다.
+- [x] CSS를 1120px 데스크톱 그리드와 태블릿·모바일 breakpoints로 재구성한다.
+- [x] JavaScript를 단일 상태·페이지별 renderer·공통 loading/error/empty 처리로 정리한다.
+- [x] Goal 추가·기록, Timeline 분류, 보관 기간, 합성 동기화의 진행·결과 상태를 표시한다.
+- [x] 합성 데이터 삭제 후 `/demo-api/reset`으로 시연 데이터를 복원할 수 있게 한다.
+- [x] 기본 프로필 데모 API 차단과 실제 `/api/**` 백업 계약은 변경하지 않는다.
+- [x] Spring 통합 테스트, 전체 `verifyAll`, Android clean build·lint를 통과시킨다.
+- [x] 브라우저에서 데스크톱·모바일 화면, 탭 이동, 입력, 오류·빈 상태를 검증한다.
 
 ## 4. 완료 조건
 

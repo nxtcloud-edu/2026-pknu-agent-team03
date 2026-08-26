@@ -76,8 +76,8 @@ Room 성능 검증은 10,000개 UsageEvent와 변경 통지를 한 트랜잭션�
 | 파일 | 크기 | SHA-256 |
 |---|---:|---|
 | `app/build/outputs/apk/debug/app-debug.apk` | 약 14 MB | `dc4454749c50383b6c6ef56ce8862b17d02ff1cd8e3b02c583b6244dadbaeda5` |
-| `server/build/libs/server-0.1.0.jar` | 약 23 MB | `31437cb784ce578d08b981dec1561a944f7ce8946488bbbf04aff72a3a4bd7fb` |
-| `server/docker/build/libs/timeback-server.jar` | 약 23 MB | `7ebff6a1ef5ebc402f7cb9e01af4b9a68d633bf9930d1d663162e0efd3ddd358` |
+| `server/build/libs/server-0.1.0.jar` | 약 23 MB | `75a521072101755f1e8ae69cbf8851f7b5e913b09c7e112e648b15b3c15a0de9` |
+| `server/docker/build/libs/timeback-server.jar` | 약 23 MB | `19029493a70258f54994735be4e0815f5d191d15fc4705b8a38b149bee9bc11d` |
 
 ## 5. 실제 HTTP/JDBC 실행 검증
 
@@ -115,6 +115,9 @@ Java/Spring·CT-05 계약과 충돌했다. 소스 수정 전
 - 기본·Docker 프로필에서 데모 API는 404이며 명시적 `demo` 프로필에서만 활성화된다.
 - 화면에 합성 데이터임을 표시하고, 삭제는 `deviceStatus=PENDING`, `serverStatus=COMPLETED`로 응답한다.
 - 실행 JAR 포트 18081에서 `/demo/index.html` 200, Timeline 7건, 삭제 상태를 직접 확인했다.
+- 후속 안정화에서 반응형 UI, 공통 loading·error·empty 상태, 키보드 접근성, API 재시도와
+  `/demo-api/reset` 복원 경계를 추가했다. 상세 결과는
+  `construction/timeback-mvp/build-test/web-dashboard-improvement-report.md`에 기록했다.
 
 데모 실행:
 
