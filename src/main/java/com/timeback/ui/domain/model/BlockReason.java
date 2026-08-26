@@ -1,0 +1,9 @@
+package com.timeback.ui.domain.model;
+
+public enum BlockReason {
+    PERMISSION_REQUIRED,
+    IDENTITY_UNAVAILABLE,
+    CONTEXT_CONFIRMATION_REQUIRED,
+    REPRESENTATIVE_GOAL_REQUIRED,
+    INVALID_TIME_RANGE
+}
