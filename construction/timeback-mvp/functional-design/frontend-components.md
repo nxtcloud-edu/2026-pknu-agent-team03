@@ -440,3 +440,51 @@ CONTENT·EMPTY·BLOCKED → REFRESHING
 - 네트워크·저장 호출 코드와 오류 예외 변환
 - 비동기 실행, 캐시, 성능 최적화 방식
 - 트랙 내부 파일·컴포넌트 구조와 테스트 코드
+
+## Track UI Support — device-data
+
+이 섹션은 UI 내부 구현을 설계하지 않고 APP-01·APP-03·APP-04가 UI 트랙에 제공하는 상태와 호출 의미만 상세화한다. 아래 오류 이름과 고정 결과는 CT-04·CT-06 변경 제안이며 `track-ui` 검토와 단일 STEP 01 게이트 전에는 공통 계약을 대체하지 않는다.
+
+### UI-01 권한 상태 조립
+
+```text
+UI-01 ReadAccessState
+  → APP-01 AccessState 조회
+  → APP-02 익명 식별자 준비 상태 조회
+  → PermissionViewData 조립
+     ├─ 권한 NOT_GRANTED: BLOCKED(PERMISSION_REQUIRED)
+     ├─ 권한 조회 실패: ERROR(OS_ACCESS_FAILURE)
+     ├─ 권한 GRANTED + 식별자 미준비: 준비 상태에 따른 LOADING 또는 BLOCKED
+     └─ 둘 다 준비: CONTENT, 주요 화면 진입 가능
+```
+
+- `OpenUsageAccessSettings` 성공 뒤 화면은 권한 허용 완료를 표시하지 않고 외부 설정 이동만 완료된 것으로 처리한다.
+- 앱으로 돌아오면 `RefreshAccessState`를 자동 또는 사용자 동작으로 실행해 APP-01이 OS-01을 다시 읽는다.
+- 권한 회수가 확인되면 기존 로컬 화면 내용을 삭제하지 않지만 주요 화면 진입과 새 수집은 차단한다.
+
+### UI-02·UI-03 새로고침 경계
+
+`RefreshHome`과 `RefreshTimeline`의 기기 데이터 부분은 같은 `RefreshDeviceData` 기능을 사용한다.
+
+| 기기 데이터 결과 | 화면 기능 결과 | UI가 다시 읽을 것 |
+|---|---|---|
+| 권한 차단 | `BLOCKED(PERMISSION_REQUIRED)` | UI-01 권한 상태 |
+| 수집·재구성 성공, 신규 사건 있음 | `SUCCESS` | APP-10의 현재 Home 또는 선택 날짜 Timeline |
+| 수집·재구성 성공, 신규 사건 0 | `SUCCESS` | APP-10을 재조회하되 기존 내용을 임의로 비우지 않음 |
+| 사건 조회 재시도 가능 실패 | `RETRYABLE_FAILURE(USAGE_SOURCE_FAILURE)` | 기존 화면 내용 유지, 사용자가 다시 시도 가능 |
+| APP-11 저장 실패 | `FAILURE(DATA_ACCESS_FAILURE)` | 완료 시각과 새 결과를 표시하지 않음 |
+
+- `DeviceDataRefreshResult.dataFreshnessAt`은 로컬 수집과 세션 교체가 모두 성공했을 때만 갱신한다.
+- 열린 세션 후보는 Timeline 항목이나 사용시간으로 표시하지 않는다. APP-10에는 완성 AppSession만 제공한다.
+- UI는 `newEventCount`나 `completedSessions`를 사용시간으로 합산하지 않는다.
+
+### 기기 데이터 화면 계약 검증 제안
+
+| 고정 결과 | 기대 화면 동작 | 연결 사례 |
+|---|---|---|
+| `FX-UI01-PERMISSION-REQUIRED` | 설정 이동·재확인 외 주요 기능 차단 | `DD-ACCESS-01` |
+| `FX-UI01-ACCESS-CHECK-FAILURE` | 이전 허용값 사용 금지, 오류와 재확인 제공 | `DD-ACCESS-04` |
+| `FX-UI02-REFRESH-NO-NEW-EVENT` | 기존 내용 유지, 성공한 최신 조회 표시 | `DD-COLLECT-03` |
+| `FX-UI03-REFRESH-SOURCE-FAILURE` | 기존 Timeline 유지, 재시도 제공 | `DD-COLLECT-06` |
+
+UI 상세 레이아웃·문구·상태 관리 방식은 `track-ui`가 이 기능 경계를 소비해 설계한다.
