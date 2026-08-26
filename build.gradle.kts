@@ -1,6 +1,8 @@
 plugins {
     id("com.android.application") version "8.11.1" apply false
     id("com.google.dagger.hilt.android") version "2.56.2" apply false
+    id("org.springframework.boot") version "3.4.13" apply false
+    id("io.spring.dependency-management") version "1.1.7" apply false
     java
 }
 
@@ -17,6 +19,7 @@ tasks.register("verifyAll") {
         ":domain:verifyDomain",
         ":backup:verifyBackup",
         ":backup:verifyConstructionIntegration",
+        ":server:test",
         ":app:testDebugUnitTest"
     )
 }

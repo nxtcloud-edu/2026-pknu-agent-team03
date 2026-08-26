@@ -17,6 +17,7 @@ sourceSets {
     main {
         java.setSrcDirs(listOf("../src/main/java"))
         java.include("com/timeback/backup/**")
+        java.exclude("com/timeback/backup/http/**")
     }
     test {
         java.setSrcDirs(listOf("../src/test/java"))

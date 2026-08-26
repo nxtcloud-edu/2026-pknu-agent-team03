@@ -121,3 +121,18 @@
 - 검증: device 13, domain 14, backup 15, UI 26, 통합 10개 회귀와 `assembleDebug`가 통과했다.
 - 산출물: `app/build/outputs/apk/debug/app-debug.apk`.
 - 미완료: 실제 Android 기기, OS-04 식별원, Room 영속 저장, Spring Boot/H2 HTTP·Docker 격리 통합.
+
+## 2026-08-26 — CONSTRUCTION STEP 06 로컬 빌드·통합 검증
+
+- 사용자 지시: 통합 PR 생성 뒤 `unit-of-work.md`의 다음 단계로 진행한다.
+- 선행 문서: 코드 수정 전에 `construction/plans/timeback-mvp-build-test-plan.md`를 생성했다.
+- APP-11 보정: Room 2.6.1/WAL 실제 저장 어댑터와 스키마를 추가하고 재개·사용자 격리·변경 커서·전체 삭제·10,000건 성능을 검증했다.
+- CT-05 보정: Android Retrofit 실제 경계와 네트워크 실패 후 동일 `changeId` 재시도 검증을 추가했다.
+- SRV-01–SRV-03 보정: Spring Boot 3.4.13/H2 HTTP·JDBC 어댑터, schema, 실행 JAR, Dockerfile·Compose를 추가했다.
+- 전체 자동 검증: device 13, domain 14, backup 15, 기존 UI 26, 트랙 통합 10, Retrofit 2, Room 5, Spring/H2 3으로 총 88개 통과.
+- Android 검증: 앱 빌드 디렉터리 정리 뒤 test·assembleDebug·lintDebug가 함께 통과했고 debug APK를 재생성했다.
+- 서버 실행 검증: 실행 JAR을 포트 18080에서 시작해 백업, 멱등 재시도, 사용자 격리, 보관, 삭제, 삭제 뒤 잔존 없음까지 합성 데이터로 확인했다.
+- Docker 상태: `docker compose config`는 통과했으나 로컬 Docker 데몬이 실행 중이지 않아 컨테이너 실행은 미실행이다.
+- 실제 기기 상태: Android SDK의 `adb devices -l` 결과 연결 기기가 없었다. OS-04와 NFR-3.3은 미완료로 유지한다.
+- 보안 경계: 원본 하드웨어 값이나 요청 ID를 로그에 출력하지 않으며, 평문 로컬 서버는 debug만 허용하고 release는 HTTPS 미설정 주소로 실패 폐쇄한다.
+- 상세 증거: `construction/timeback-mvp/build-test/build-test-report.md`.

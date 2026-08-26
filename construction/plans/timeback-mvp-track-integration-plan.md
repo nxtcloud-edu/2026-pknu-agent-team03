@@ -121,8 +121,9 @@
 
 - [ ] Android 14 이상 기기의 Usage Access·UsageEvent·화면 종료 시나리오
 - [ ] OS-04 하드웨어 식별원 접근 가능성·안정성·개인정보 영향 검증
-- [ ] Room 기반 APP-11 실제 영속 저장과 프로세스 재시작 회귀
-- [ ] Spring Boot/H2 HTTP 경계와 Docker 격리 서버 통합
+- [x] Room 기반 APP-11 실제 영속 저장과 프로세스 재시작 회귀
+- [x] Spring Boot/H2 HTTP 경계와 실행 JAR 격리 서버 통합
+- [ ] Docker 데몬에서 Compose 이미지 빌드·컨테이너 실행
 - [ ] 검증된 익명 식별원을 production gateway에 연결한 뒤 UI-02–UI-08 실제 기능 활성화
 
 위 항목은 현재 코드가 임의 구현으로 성공을 가장하지 않는다. production 앱은 Usage Access를 실제 조회하고,

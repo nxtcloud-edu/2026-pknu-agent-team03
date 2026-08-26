@@ -8,28 +8,30 @@
 |---|---|
 | 프로젝트 | TimeBack |
 | 공식 작업 단위 | `UOW-01 timeback-mvp` |
-| 현재 책임 초점 | 네 트랙 병합 뒤 CT-01–CT-06 통합·빌드 검증 |
-| 완료 단계 | 네 트랙 독립 STEP 01–05 결과 병합, 공통 자동 회귀와 debug APK 생성 |
-| 활성 단계 | `UOW-01 timeback-mvp` 실제 환경 통합 검증 |
-| 단계 상태 | `INTEGRATION_IN_PROGRESS` — OS-04·Room·HTTP 서버·실기기 검증 대기 |
+| 현재 책임 초점 | CONSTRUCTION STEP 06 로컬 빌드·HTTP/Room 통합과 실제 기기 검증 경계 |
+| 완료 단계 | 네 트랙 STEP 01–05 통합, STEP 06 로컬 자동 검증·APK·서버 JAR·lint |
+| 활성 단계 | `UOW-01 timeback-mvp` Android 14 이상 실제 기기 검증 |
+| 단계 상태 | `STEP_06_LOCAL_VERIFIED` — 88개 자동 검증 통과, OS-04·NFR-3.3 실기기 대기 |
 | STEP 04 Gate 2 | `APPROVED` — 2026-08-26, 사용자 응답 `2` |
 | STEP 05 계획 파일 | `aidlc-docs/construction/plans/timeback-mvp-step05-implementation-plan.md` |
 | STEP 05 Gate 1 | `APPROVED` — 2026-08-26, 사용자 응답 `2` |
 | STEP 05 Gate 2 | `track-domain-engine` 범위 승인 기록; UOW 전체 통합 승인을 뜻하지 않음 |
-| 애플리케이션 코드 생성 | `ALLOWED` — 승인된 APP-05~APP-09 pure domain 범위 |
-| 기술 스택 결정 | `DECIDED` — Java 17/JDK 표준 라이브러리 |
+| 애플리케이션 코드 생성 | `INTEGRATED` — Java 17 Android·domain·backup·server 모듈 |
+| 기술 스택 결정 | `DECIDED` — Java 17, Room, Retrofit, Spring Boot 3.x, H2 |
 | 최종 갱신일 | 2026-08-26 |
 
 ## 구현 경계
 
-- 통합 구현: `device-core`, `domain`, `backup`, `app` Gradle 모듈과 각 트랙의 Java 소스.
-- 자동 검증: `./gradlew --no-daemon verifyAll`에서 device·domain·backup·UI·트랙 통합 회귀를 함께 실행한다.
-- 설치 산출물: `./gradlew --no-daemon :app:assembleDebug`로 debug APK를 생성한다.
-- 미검증 경계: OS-04 실제 식별원, Room 영속 저장, Spring HTTP/Docker 서버, Android 14 이상 실기기 시나리오.
+- 통합 구현: `device-core`, `domain`, `backup`, `server`, `app` Gradle 모듈과 각 트랙의 Java 소스.
+- 실제 어댑터: APP-11 Room/WAL, CT-05 Retrofit, SRV-01–SRV-03 Spring Boot/H2.
+- 자동 검증: `./gradlew --no-daemon verifyAll`에서 88개 device·domain·backup·UI·Room·HTTP 통합 회귀를 실행한다.
+- 설치·실행 산출물: debug APK와 Spring Boot 실행 JAR, Docker Compose 정의.
+- 미검증 경계: OS-04 실제 식별원, Android 14 이상 Usage Access·UsageEvent, Docker 데몬 컨테이너 실행, release HTTPS 주소·인증서.
 
 ## 다음 허용 행동
 
 1. Android 14 이상 기기에서 APK 설치와 Usage Access·UsageEvent 체크리스트를 실행한다.
 2. OS-04 하드웨어 식별원 위험 게이트를 검증하고 승인된 결과를 기록한다.
-3. Room APP-11과 Spring Boot/H2 HTTP 서버 경계를 연결해 격리 통합 검증을 실행한다.
-4. 사용자가 원하는 VCS 정책에 따라 통합 변경을 stage, commit, push한다.
+3. 검증된 식별원을 production 조립에 연결한 뒤 identity 의존 UI·백업 여정을 실행한다.
+4. Docker 데몬이 준비되면 `docker compose up --build`로 컨테이너 경계를 반복 확인한다.
+5. STEP 06 변경을 PR #6 브랜치에 commit·push한다.
