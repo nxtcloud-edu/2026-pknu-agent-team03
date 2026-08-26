@@ -403,10 +403,6 @@ UI에 원시 Context를 다시 합산시키지 않는다.
 
 RecoveredTime 저장과 RunningTimer 제거는 하나의 기능 작업이다.
 
-### SC-09-04. `cancelGoalTimer`
-
-출력: 취소된 timer 정보. RecoveredTime은 생성하지 않는다.
-
 ### SC-09-05. `recordManualRecoveredTime`
 
 입력: `goalId`, 유효 구간.
@@ -537,3 +533,50 @@ APP-10은 이 값을 화면별로 조립할 뿐 계산식을 다시 수행하지
 - SC-V07: fake와 실제 의존 구현이 같은 기능 계약을 만족해야 한다.
 - SC-V08: 계약 오류와 로그에 상세 행동 데이터가 기본 포함되지 않는다.
 - SC-V09: Java 또는 저장 제품의 구체 타입이 STEP 01 계약에 유입되지 않는다.
+
+## 13. 리뷰 보완 — 우선 적용 계약 정정
+
+이 절은 SC-D/SC-07~SC-09/SC-Q/SC-V의 이전 서술과 충돌할 때 우선한다.
+
+### SC-D05. InstalledAppSource — Android 경계 제공
+
+`listInstalledApps()`는 최소 `packageName`, 사용자 표시 `displayName`, `snapshotAvailability=COMPLETE|UNAVAILABLE`, source-observed time만 반환한다. 화면 내용·콘텐츠·위치는 반환하지 않는다. APP-05는 COMPLETE snapshot에서만 새 App을 `UNCLASSIFIED + discoveredAt`으로 관찰하며 `classificationUpdatedAt`은 사용자 분류 저장 때만 설정한다. UNAVAILABLE이면 저장 App 분류를 삭제·초기화하지 않고 `DEPENDENCY_FAILURE`를 반환한다.
+
+### SC-D02A. DomainDataAuthority 확장
+
+APP-11은 Context revision/provenance, current-effective Context 조회, MeasurementDay logical-key upsert/source revision, BaselineObservation/Candidate, RunningTimer, OverlapResolution을 기준 엔터티로 저장·조회한다. `listCurrentEffectiveContexts(period)`는 지표용 current EffectiveSegmentDecision만, 감사 조회는 revision history를 반환한다. 기준·영속 파생 cache entity registry는 APP-12 backup, 보관, APP-13 전체 삭제 대상이며 backup/device 중 하나라도 실패하면 삭제 완료 통지를 발행하지 않는다.
+
+### SC-D04A. ChangeNotifier 확장
+
+작업 종류는 `CREATED|UPDATED|SUPERSEDED|DELETED`다. `DELETED`에는 entity type/id, 삭제 원인, 영향 범위만 전달하며 민감 상세값은 복사하지 않는다. timer 완료는 RecoveredTime `CREATED`와 RunningTimer `DELETED(reason=COMPLETED)`를 하나의 성공 change set으로 통지한다.
+
+### SC-07A. Context revision 계약
+
+`reanalyzeContexts`는 `sourceRevision`, 새/유지/대체된 revision 및 current EffectiveSegmentDecision을 반환한다. `confirmMixedContext`는 원래 confirmation answer, OTHER final enum, decidedAt, previous auto classification을 보존한다. `editContext`는 `TIMELINE_EDIT` provenance를 보존한다. `listContexts`는 canonical interval, duration, current effective classification, evidence summary, confirmation provenance, freshness를 반환하며 지표 조회와 history 조회를 혼합하지 않는다.
+
+### SC-08A. Measurement·Saved 계약
+
+`recordMeasurementDay` 입력에는 logical key, coverage revision, context source revision이 포함된다. 동일 key·동일 revision은 no-op, 더 새 revision은 atomic upsert다. 출력에는 applied/no-op, measurement revision, 관찰 재구성 결과를 포함한다. `getSavedMetrics`는 full/partial comparison basis, as-of, covered range, `sourceRevision`, `computedThroughRevision`, `freshness`, 마지막 성공 시각을 포함한다. `DATA_INCOMPLETE`는 coverage gap에만 사용하며 current partial coverage는 `IN_PROGRESS` 잠정 결과다.
+
+### SC-09A. Goal·Rate 계약 정정
+
+`cancelGoalTimer`(SC-09-04)은 제공 계약에서 제거한다. `resolveGoalOverlap` 입력은 임시 segment 좌표가 아니라 `canonicalSourceRecoveredIds`, `effectiveInterval`, representative Goal이다. `getGoalLifetimeProgress()`는 기간 입력 없이 lifetime assigned duration·ratio·pending을 반환한다. `getGoalRecoveredSummary(period)`는 period-clipped Goal별 assigned/pending을 반환한다. 기존 `getGoalProgress(period)`는 이 두 계약으로 대체한다.
+
+`getRecoveryMetrics(period)`은 assigned Recovered, pending overlap, Saved와 함께 `rateAvailability`, 조건부 `unavailabilityReason`, `recoveryDecisionState`, 조건부 ratio를 반환한다. pending은 Rate availability를 대체하지 않는다.
+
+### SC-QA. canonical view·freshness 계약
+
+모든 APP-10 view는 `sourceRevision`, `computedThroughRevision`, `freshness=FRESH|RECALCULATING|STALE|FAILED`, `lastSuccessfulAt`, 조건부 retryable failure key를 제공한다. FRESH는 두 revision이 같음을 뜻하고, stale/failed snapshot은 계산된 revision을 함께 표시한다.
+
+`TimelineDomainView`는 raw Context 조합 대신 `CanonicalTimelineRow` 목록을 제공한다. 각 row는 `rowId`, 날짜-clipped canonical `[startAt,endAt)`, 이미 계산한 `duration`, final classification/status/revision, app/activity relation summary, `independent|composite`, confirmation provenance, coverage/freshness를 가진다. UI는 row를 재분할·union·계산하지 않는다.
+
+### SC-V10~SC-V17. 보완 검증
+
+- SC-V10: superseded Context는 current metrics input에 없다.
+- SC-V11: MeasurementDay 재시도는 idempotent이고 source revision 변경만 upsert한다.
+- SC-V12: partial coverage와 incomplete coverage, DST elapsed day가 구분된다.
+- SC-V13: lifetime GoalProgress와 period summary가 분리된다.
+- SC-V14: resolution은 source recovered ID 집합·effective interval에 안정적으로 연결된다.
+- SC-V15: entity registry 전체가 retention/backup/full deletion 범위에 있다.
+- SC-V16: canonical Timeline row의 duration과 UI 비계산 원칙이 보장된다.
+- SC-V17: stale/failed view는 revision과 마지막 성공 snapshot을 구분한다.

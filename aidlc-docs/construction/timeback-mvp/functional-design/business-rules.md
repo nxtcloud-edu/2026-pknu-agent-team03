@@ -265,21 +265,13 @@ Waste가 Baseline보다 많으면 `savedDuration=0`이고 음수 `wasteDelta`로
 
 실행 중 타이머가 있으면 `TIMER_ALREADY_RUNNING`을 반환하고 기존 타이머를 유지한다.
 
-### BR-09-03. 타이머 완료·취소
-
-완료:
+### BR-09-03. 타이머 완료
 
 - 현재 실행 중 타이머가 존재해야 한다.
 - 완료 시각이 시작보다 뒤여야 한다.
 - `[startAt, completedAt)`의 `TIMER` RecoveredTime을 저장한다.
 - 저장 성공 뒤 실행 중 타이머를 제거한다.
-
-취소:
-
-- RecoveredTime을 만들지 않는다.
-- 실행 중 타이머를 제거한다.
-
-저장 실패 시 기존 타이머를 임의로 완료 처리하지 않는다.
+- 저장 실패 시 기존 타이머를 임의로 완료 처리하지 않는다.
 
 ### BR-09-04. 수동 기록
 
@@ -369,7 +361,7 @@ Context 수정은 RecoveredTime과 목표 배정을 변경하지 않는다. APP-
 | `INVALID_GOAL_NAME` | Goal 이름이 비어 있음 | 없음 |
 | `INVALID_TARGET_DURATION` | 목표시간이 양수가 아님 | 없음 |
 | `TIMER_ALREADY_RUNNING` | 기존 실행 타이머 존재 | 기존 타이머 유지 |
-| `TIMER_NOT_RUNNING` | 완료·취소 대상 없음 | 없음 |
+| `TIMER_NOT_RUNNING` | 완료 대상 없음 | 없음 |
 | `INVALID_REPRESENTATIVE_GOAL` | 후보가 아닌 Goal 선택 | 기존 resolution 유지 |
 | `DATA_INCOMPLETE` | 측정 기간 완전성 부족 | 확정 지표 생성 없음 |
 
@@ -406,3 +398,61 @@ Context 수정은 RecoveredTime과 목표 배정을 변경하지 않는다. APP-
 - 대표 Goal 미선택 overlap을 임의 Goal에 배정
 - 실제 사용자 행동 데이터를 예시·로그·fixture로 사용
 - STEP 01에서 Java 라이브러리·DB·프레임워크 선택
+
+## 11. 리뷰 보완 — 우선 적용 업무 규칙
+
+이 절은 기존 BR-C/BR-07/BR-08/BR-09와 충돌할 때 우선한다.
+
+### BR-10-01. current-effective Context만 계산
+
+Context 확인·직접 수정은 새 revision을 `CURRENT`로 저장하고 이전 revision을 `SUPERSEDED`로 전환한다. Timeline 감사 조회는 전 revision을 보일 수 있지만, `Waste(P)`와 Saved의 입력은 `CURRENT` EffectiveSegmentDecision 중 세션과 겹치는 WASTE canonical interval의 합집합뿐이다. 대체된 WASTE는 집계에 남지 않는다.
+
+### BR-10-02. 다중 관계 축약
+
+각 세션 포함 AtomicSegment에 관계 evidence를 모두 유지한 뒤 정확히 하나의 EffectiveSegmentDecision을 만든다. current 사용자 결정이 가장 우선이고, 없으면 모든 관계 후보의 비중립 분류 집합이 하나면 그 값, 둘 이상이면 `MIXED`, 그 외에는 `NEUTRAL` fallback을 적용한다. Activity 단독 구간은 앱 기반 결정·Waste 대상이 아니다. UI는 evidence를 설명할 수 있으나 지표에는 decision 하나만 사용한다.
+
+### BR-10-03. MeasurementDay upsert와 과거 수정
+
+`recordMeasurementDay`는 논리 키와 source/coverage revision을 비교한다. 동일 revision 재시도는 no-op이고, 더 새 revision은 해당 날짜를 원자적으로 대체한다. 관찰 중 날짜는 고유 키로 정렬해 연속 7일을 다시 구성한다. 과거 Context 수정은 해당 날짜 MeasurementDay와 미승인 Observation/Candidate를 재계산한다. 이미 ACTIVE Baseline은 자동 변경하지 않고, 달라진 7일 결과만 `RECALCULATION_PROPOSED` candidate로 만든다.
+
+### BR-10-04. 진행 중 기간 비교
+
+과거 기간 또는 종료된 날짜에 coverage 공백이 있으면 `DATA_INCOMPLETE`로 숫자를 만들지 않는다. 현재 현지일이 as-of까지 연속 coverage이면 다음을 잠정 제공한다.
+
+```text
+expectedBaseline = dailyAverage × (completeDayCount + elapsedDayEquivalent)
+currentWaste = 같은 covered 범위의 current-effective Waste union
+```
+
+이 결과는 `periodStatus=IN_PROGRESS`, `comparisonBasis=PARTIAL_COVERAGE`다. 23시간·25시간 현지일은 실제 elapsed day length 기준 `elapsedDayEquivalent`를 사용한다. 부분일은 Baseline 관찰·후보에 포함하지 않는다.
+
+### BR-10-05. lifetime Goal과 기간 report
+
+Goal 화면 진행률은 Goal 생성 이후 current assigned 구간의 합집합으로 계산한 `GoalLifetimeProgress`다. 선택 기간 report는 interval에 clip한 `GoalRecoveredSummary`만 사용한다. UsageStats coverage는 Goal lifetime progress의 availability를 바꾸지 않으며, period Saved/Rate에만 영향을 준다.
+
+### BR-10-06. OverlapResolution 재분할
+
+대표 선택은 `canonicalSourceRecoveredIds + effectiveInterval`에 저장한다. 조회 clipping 또는 새 경계로 child segment가 생겨도 source ID 집합이 같고 parent effective interval 안이면 대표를 상속한다. source 집합 또는 후보 Goal이 달라진 부분만 pending으로 되돌린다. 기존 BR-09-06의 파생 segment 정확 일치 조건은 이 규칙으로 대체한다.
+
+### BR-10-07. Rate 상태 우선순위
+
+Recovery Rate는 `rateAvailability`와 별도 `recoveryDecisionState`를 반환한다. `DATA_INCOMPLETE`가 먼저, 그다음 `BASELINE_OBSERVING`, 그다음 `SAVED_ZERO`가 불가 사유를 정한다. 어느 것도 아니고 Saved가 양수이면 `AVAILABLE`이며 Recovered 0은 정확한 0 비율이다. pending overlap은 assigned Recovered와 pending duration을 함께 보일 뿐 Rate reason을 바꾸지 않는다.
+
+### BR-10-08. timer 완료만 허용
+
+기존 BR-09-03의 취소 규칙은 제거한다. timer 완료 시 RecoveredTime 생성과 RunningTimer 삭제는 동일 변경 묶음으로 성공하거나 모두 기존 상태를 유지한다. 삭제 통지에는 `DELETED`, 원인 `COMPLETED`가 필요하다.
+
+### BR-10-09. freshness
+
+입력 변경은 영향을 받는 view의 `sourceRevision`을 증가시킨다. `computedThroughRevision == sourceRevision`이면 `FRESH`; 이전 성공 snapshot이 남아 계산 중이면 `RECALCULATING` 또는 `STALE`; 재계산 실패면 `FAILED`다. stale/failed 값은 해당 계산 revision과 마지막 성공 시각을 함께 제공하고 최신 값으로 가장하지 않는다.
+
+### BR-10-10. 추가 합성 검증
+
+- BR-T17: WASTE current revision을 PRODUCTIVE로 수정하면 감사에는 두 revision이 남고 현재 Waste에는 0분만 반영된다.
+- BR-T18: 다중 Session/Activity의 상충 evidence와 현재 PRODUCTIVE 결정은 WASTE가 아니라 PRODUCTIVE final decision 하나를 만든다.
+- BR-T19: 동일 MeasurementDay revision 재시도는 valid day count를 1만 유지한다.
+- BR-T20: 정상 coverage의 진행 중 DST 날짜는 IN_PROGRESS 잠정값, 중간 공백 날짜는 DATA_INCOMPLETE이며 둘 다 Baseline 유효일이 아니다.
+- BR-T21: 120분 lifetime Goal에서 30분 기간 report 조회는 lifetime 120분과 report 30분을 분리한다.
+- BR-T22: overlap 재분할·clipping 뒤 같은 source set child는 기존 대표를 상속한다.
+- BR-T23: incomplete+pending, observing+pending, saved-zero+pending은 각각 우선 reason과 별도 pending을 보인다.
+- BR-T24: 타이머 완료만 Recovered 생성·timer 삭제를 일으키고 cancel 명령은 없다.

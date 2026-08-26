@@ -84,7 +84,8 @@ Activity 종류는 `EXERCISE`, `STUDY`, `DEVELOPMENT`, `READING`, `LEISURE`, `CU
 | `displayName` | 예 | 사용자 표시 이름, 분류 근거가 아님 |
 | `classificationState` | 예 | `UNCLASSIFIED` 또는 `CLASSIFIED` |
 | `defaultClassification` | 조건부 | `CLASSIFIED`일 때만 존재 |
-| `updatedAt` | 예 | 사용자가 기본 분류를 마지막으로 변경한 시각 |
+| `discoveredAt` | 예 | 설치 앱 공급 경계에서 처음 관찰한 시각 |
+| `classificationUpdatedAt` | 조건부 | 사용자가 기본 분류를 마지막으로 저장한 시각; `CLASSIFIED`일 때만 존재 |
 
 불변식:
 
@@ -379,8 +380,7 @@ RECALCULATION_PROPOSED
 타이머 없음
   → Goal 선택·시작 → RUNNING
 RUNNING
-  ├─ 완료(end > start) → RecoveredTime(TIMER) 생성 + 타이머 없음
-  └─ 취소 → RecoveredTime 생성 없이 타이머 없음
+  └─ 완료(end > start) → RecoveredTime(TIMER) 생성 + 타이머 없음
 ```
 
 ## 8. 소유권과 파생 관계
@@ -421,3 +421,79 @@ RUNNING
 - 영속화 스키마와 트랜잭션 경계
 - 테스트 프레임워크와 fake 구현 방식
 - 큰 기간 계산의 성능 목표와 실제 `verify-domain` 명령
+
+## 11. 리뷰 보완 — 우선 적용 모델 정정
+
+이 절은 DM-11~DM-29 및 §8의 이전 서술과 충돌할 때 우선한다. 이 정정은 Gate 1에서 승인된 사용자 우선·7일 Baseline·대표 Goal 정책을 더 정확히 표현하며 새 MVP 기능을 추가하지 않는다.
+
+### DM-30. Context 관계 증거와 유효 판정
+
+`ContextRelationEvidence`와 `EffectiveSegmentDecision`을 분리한다.
+
+- `ContextRelationEvidence`: `evidenceId`, canonical `[startAt,endAt)`, `sessionId`, 조건부 `activityId`, App Default/Activity 의도/사용자 확정 Context의 근거 식별자와 당시 분류를 가진다. 복수 개가 가능하며 감사·설명용이다.
+- `EffectiveSegmentDecision`: `decisionId`, canonical `[startAt,endAt)`, 관계 evidence ID 집합, 정확히 하나의 final `classification`, `decisionStatus`, 현재 Context revision 및 `effectiveState`를 가진다. 세션이 하나 이상 있는 AtomicSegment마다 정확히 하나만 존재한다.
+- Activity만 존재하는 구간은 ActivitySlice로 보이지만 `EffectiveSegmentDecision`·앱 기반 Waste를 만들지 않는다.
+
+`EffectiveSegmentDecision`은 현재 사용자 결정이 있으면 이를 사용한다. 없으면 관계 후보의 비중립 분류 집합이 하나이면 그 값을, 둘 이상이면 `MIXED`, 그 외에는 App Default 또는 `UNCLASSIFIED → NEUTRAL` fallback을 사용한다. 같은 canonical segment에는 상충하는 `CURRENT` 사용자 결정이 존재할 수 없다.
+
+### DM-31. Context revision과 provenance
+
+DM-12의 Context는 revision 레코드다. 다음 필드를 추가한다.
+
+| 필드 | 의미 |
+|---|---|
+| `revision` | 같은 논리 Context의 단조 증가 revision |
+| `effectiveState` | `CURRENT` 또는 `SUPERSEDED` |
+| `decidedAt` | 이 revision이 결정된 시각 |
+| `sourceAnalysisRevision` | 자동 분석 또는 사용자 결정이 참조한 입력 revision |
+| `decisionKind` | `AUTO`, `CONFIRMATION`, `TIMELINE_EDIT` |
+| `confirmationAnswer` | `CONFIRMATION`일 때의 DM-13 원래 답변 |
+| `otherFinalClassification` | `OTHER`일 때 사용자가 고른 final enum |
+| `previousAutoClassification` | 사용자 결정 직전 자동 분류 |
+| `supersedesRevisionId` | 대체한 이전 revision |
+
+확인·수정은 새 `CURRENT` revision 삽입과 이전 revision의 `SUPERSEDED` 전환을 하나의 원자 작업으로 수행한다. `PRODUCTIVE_PURPOSE`와 `ASSISTIVE_USE`는 모두 PRODUCTIVE로 집계하되 provenance에서 구별한다. Timeline 직접 수정은 confirmation answer를 만들지 않고 `TIMELINE_EDIT` provenance를 남긴다.
+
+### DM-32. MeasurementDay revision과 부분 기간
+
+DM-14는 `(anonymousUser, localDate, localTimeZoneContext)`를 논리 키로 하며 `measurementRevision`, `contextSourceRevision`, `coverageRevision`, `computedAt`을 추가한다. 종료된 날짜만 `COMPLETE` Baseline 유효일이 될 수 있다.
+
+진행 중 현지일에는 기준 `MeasurementDay`와 별도로 `PartialCoverage`를 사용한다: `coverageStatus=PARTIAL_IN_PROGRESS`, `coveredStart`, `coveredEnd`, `asOf`, DST-aware `elapsedDayEquivalent`, `coverageRevision`. 부분일은 Baseline 관찰·후보에 포함하지 않는다.
+
+### DM-33. 기간 지표와 목표 지표 분리
+
+DM-18의 `PeriodMetrics`에는 `comparisonBasis=FULL_DAYS|PARTIAL_COVERAGE`, `asOf`, `sourceRevision`, `computedThroughRevision`, `freshness`를 추가한다. `DATA_INCOMPLETE`는 coverage 공백이 있을 때만 사용하며, 연속 coverage가 있는 현재 날짜는 `IN_PROGRESS`와 `PARTIAL_COVERAGE`의 잠정 수치를 제공할 수 있다.
+
+DM-24는 `GoalLifetimeProgress`다. Goal 생성 시각부터 모든 current assigned RecoveryAtomicSegment의 합집합을 `accumulatedDuration`으로 사용하며 기간 조회와 UsageStats coverage에 의존하지 않는다. 선택 기간의 Goal별 값은 별도 `GoalRecoveredSummary`로만 제공한다.
+
+DM-25는 다음으로 정정한다.
+
+| 필드 | 의미 |
+|---|---|
+| `rateAvailability` | `AVAILABLE` 또는 `NOT_AVAILABLE` |
+| `unavailabilityReason` | `DATA_INCOMPLETE`, `BASELINE_OBSERVING`, `SAVED_ZERO` 중 하나 |
+| `recoveryDecisionState` | `NONE` 또는 `DECISION_REQUIRED` |
+| `pendingOverlapDuration` | 대표 선택 대기 구간 |
+
+`unavailabilityReason` 우선순위는 `DATA_INCOMPLETE` → `BASELINE_OBSERVING` → `SAVED_ZERO`다. pending overlap은 Rate 불가 사유가 아니라 별도 상태다.
+
+### DM-34. 안정적인 OverlapResolution
+
+DM-23은 파생 좌표가 아니라 `resolutionId`, 순서 없는 `canonicalSourceRecoveredIds`, `effectiveInterval`, `candidateGoalIds`, `representativeGoalId`, `revision`, `effectiveState`, `resolvedAt`으로 식별한다. `segmentStart/segmentEnd`는 감사용 표시에만 사용한다. 재분할 뒤 source ID 집합이 같고 child interval이 `effectiveInterval` 안에 있으면 대표 선택을 상속한다. source 집합·후보가 달라지거나 대표 Goal이 후보가 아니면 해당 부분만 다시 `REPRESENTATIVE_REQUIRED`가 된다.
+
+### DM-35. 기준 파생 데이터 lifecycle
+
+APP-11 기준 엔터티 registry는 App, Activity, Context revision/provenance, MeasurementDay, BaselineObservation, BaselineCandidate, Baseline, Goal, RunningTimer, RecoveredTime, OverlapResolution을 포함한다. `AtomicSegment`, ActivitySlice, RecoveryAtomicSegment, 계산 view cache는 재현 가능한 값이지만 영속 캐시가 존재하면 같은 보관·백업·전체 삭제 범위에 포함된다. APP-12 백업은 기준 엔터티 변경·삭제를 복사하고, APP-13 전체 삭제는 기기 레코드와 anonymous-user backup copy 모두를 삭제하며 어느 한쪽 실패 시 완료로 표시하지 않는다.
+
+### DM-36. 타이머 lifecycle 정정
+
+DM-29의 `취소` 분기는 이 절로 제거한다. 승인된 사용자 명령은 시작과 완료뿐이며, 완료만 RecoveredTime 생성과 RunningTimer 제거를 일으킨다. 앱 재진입 시 RUNNING 복원·표시는 취소 기능이 아니다. 명시적 취소는 새 `spec.md` 원문과 요구사항 Gate 없이는 추가하지 않는다.
+
+### DM-37. 추가 불변식
+
+- DM-I12: Waste·Saved·Timeline 집계는 각 canonical segment의 `CURRENT` EffectiveSegmentDecision만 사용한다.
+- DM-I13: 같은 MeasurementDay 논리 키·동일 source/coverage revision의 재기록은 관찰일 수를 늘리지 않는다.
+- DM-I14: `COMPLETE`가 아닌 부분일은 Baseline 유효일·후보 창에 들어가지 않는다.
+- DM-I15: GoalLifetimeProgress와 GoalRecoveredSummary는 서로 다른 범위의 값이며 대체하지 않는다.
+- DM-I16: Rate 불가 사유와 대표 Goal 선택 대기 상태는 독립이다.
+- DM-I17: RunningTimer 완료의 RecoveredTime 생성·timer 삭제는 하나의 변경 묶음이다.

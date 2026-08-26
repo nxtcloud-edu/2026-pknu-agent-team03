@@ -222,14 +222,14 @@ Waste가 Baseline보다 많을 때 Saved는 0이지만 증가분은 별도 변�
 - 선택 Goal
 - 시작 시각
 - 현재 경과 표시값
-- 완료와 취소
+- 완료
 
 화면의 실시간 경과 표시는 참고이며 완료 RecoveredTime은 APP-09가 시작·완료 시각으로 계산한 값을 사용한다.
 
 동시에 다른 타이머 시작 시:
 
 - 기존 실행 Goal 안내
-- 기존 타이머 완료·취소 경로 제공
+- 기존 타이머 완료 경로 제공
 - 두 번째 타이머가 시작됐다고 표시하지 않음
 
 ### FE-05-03. 직접 기록
@@ -392,3 +392,32 @@ UI-05 TIMER/MANUAL 저장
 - 재계산 진행 상태의 동기·비동기 UX
 - 접근성 검증 도구와 UI 자동 테스트 도구
 - 5초 갱신 NFR을 측정할 대표 데이터 규모
+
+## 14. 리뷰 보완 — 우선 적용 UI 소비 규칙
+
+이 절은 기존 FE-C/FE-02/FE-03/FE-05~FE-07의 이전 서술과 충돌할 때 우선한다.
+
+### FE-R01. canonical Timeline과 결정 provenance
+
+UI-03은 `CanonicalTimelineRow`만 표시하며 raw Session/Activity/Context를 다시 분할·union하거나 duration을 계산하지 않는다. row의 canonical interval·duration·effective classification·revision·coverage/freshness·composite summary를 그대로 사용한다. 사용자 확정 row에는 자동 분류, `PRODUCTIVE_PURPOSE`/`ASSISTIVE_USE` 등 원래 답변 또는 Timeline 수정, decidedAt을 설명한다. OTHER는 final enum도 함께 보인다.
+
+### FE-R02. freshness와 부분일
+
+모든 화면은 APP-10 freshness를 소비한다. `RECALCULATING`/`STALE`은 마지막 성공 값과 그 revision을 잠정값으로 표시하고, `FAILED`는 새 성공값인 것처럼 표시하지 않으며 재시도를 제공한다. 정상 coverage의 오늘·진행 중 주는 `IN_PROGRESS`와 partial coverage 범위/as-of를 표시할 수 있다. coverage 공백인 경우만 `DATA_INCOMPLETE`로 확정 Saved·Rate를 숨긴다.
+
+### FE-R03. Recovery Rate와 Goal 범위
+
+Rate는 `rateAvailability=NOT_AVAILABLE`일 때 0%로 바꾸지 않고 `unavailabilityReason`을 표시한다. 대표 Goal 선택 대기는 reason과 독립적으로 assigned Recovered/pending duration을 함께 표시한다. UI-06은 `GoalLifetimeProgress`만 사용하며 기간 선택으로 목표 누적이 줄지 않는다. UI-07은 `GoalRecoveredSummary(period)`만 사용해 선택 기간의 Goal별 Recovered를 보인다.
+
+### FE-R04. 타이머와 삭제 반영
+
+FE-05-02의 `취소` 동작과 “완료·취소 경로” 서술은 제거한다. 승인된 UI 동작은 시작·완료뿐이다. 완료 성공은 Recovered 생성과 timer `DELETED(COMPLETED)` change set을 받은 뒤에만 실행 상태를 해제한다.
+
+### FE-R05. 추가 화면 검증
+
+- FE-T13: Timeline row duration은 UI 계산 없이 날짜 실제 경과시간을 넘지 않는다.
+- FE-T14: 두 PRODUCTIVE confirmation answer가 같은 final class여도 원래 답변·시각을 구별해 표시한다.
+- FE-T15: partial IN_PROGRESS와 coverage-gap DATA_INCOMPLETE가 다르게 표시된다.
+- FE-T16: stale/failed 결과가 source/computed revision과 마지막 성공값을 구분한다.
+- FE-T17: Goal 화면 lifetime progress와 report period summary가 섞이지 않는다.
+- FE-T18: 실행 timer에는 cancel UI action이 없고 completion 삭제 change set 후에만 종료 표시한다.

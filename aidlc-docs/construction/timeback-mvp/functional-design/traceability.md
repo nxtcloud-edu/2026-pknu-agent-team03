@@ -78,7 +78,7 @@
 
 | 요구 | 스토리 | CT/APP | 모델·규칙 | 계약·UI | 검증 |
 |---|---|---|---|---|---|
-| FR-8.1 Goal 타이머 | US-17 | CT-02·03·04 / APP-09 | DM-20·29, BR-09-02·03 | SC-09-02~04, FE-05-02 | TR-27~TR-29 |
+| FR-8.1 Goal 타이머 | US-17 | CT-02·03·04 / APP-09 | DM-20·29, BR-09-02·03 | SC-09-02~03, FE-05-02 | TR-27~TR-29, TR-61 |
 | FR-8.2 TIMER/MANUAL | US-17·18 | CT-02·03 / APP-09 | DM-21, BR-09-03·04 | SC-09-03·05, FE-05-02·03 | TR-29, TR-30 |
 | FR-8.3 목표 누적·Recovered | US-19 | CT-02 / APP-09 | DM-22~24, BR-09-07·08 | SC-09-07·08, FE-06-02 | TR-31 |
 | FR-8.4 초과 Recovered·Rate | US-21 | CT-02·04 / APP-09 | DM-25, BR-09-08 | SC-09-08, FE-02-03 | TR-35 |
@@ -285,3 +285,49 @@ Gate 2는 특히 다음 현재 설계 선택을 승인하는지 확인한다.
 4. 대표 Goal 미선택 중첩은 전체 Recovered에서도 보류한다.
 5. Context 수정은 RecoveredTime을 바꾸지 않고 Recovery Rate만 연쇄 갱신한다.
 6. 진행 중 기간 결과는 값과 함께 `IN_PROGRESS` 상태를 표시한다.
+
+## 12. 리뷰 보완 추적 — 우선 적용 연결
+
+이 절은 기존 표의 누락을 보완하며, §10의 체크 항목은 아래 항목이 모두 검증될 때만 완료로 해석한다.
+
+### 12.1 추가 요구·스토리 연결
+
+| 요구/스토리 | 모델·규칙 | 계약·UI | 회귀 검증 |
+|---|---|---|---|
+| FR-5.1~5.8, FR-7.1, US-06~10 | DM-30·31·DM-I12, BR-10-01·02 | SC-07A, SC-QA, FE-R01 | TR-49, TR-50, TR-57, TR-58 |
+| FR-6.1~6.4, US-08, NFR-1.1·2.1 | DM-30, BR-10-02·09 | SC-QA CanonicalTimelineRow, FE-R01·R02 | TR-50, TR-57, TR-62 |
+| FR-7.2~7.5, FR-9.1~9.3, US-11~15, NFR-2.2·2.3 | DM-32·33·DM-I13·14, BR-10-03·04·07 | SC-08A, FE-R02·R03 | TR-51, TR-52, TR-56, TR-62 |
+| FR-4.4, FR-8.3, FR-9.5, US-16·19·15 | DM-33·DM-I15, BR-10-05 | SC-09A, FE-R03 | TR-53 |
+| FR-8.5, US-20, NFR-2.4 | DM-34, BR-10-06 | SC-09A, FE-05-04 | TR-54 |
+| FR-8.1~8.3, US-17~19, NFR-3.2 | DM-36·DM-I17, BR-10-08 | SC-D04A, SC-09A, FE-R04 | TR-60, TR-61 |
+| FR-8.4·8.6, US-21 | DM-33·DM-I16, BR-10-07 | SC-09A, FE-R03 | TR-56 |
+| FR-10.3·10.4, NFR-4.3, US-24·25 | DM-35, BR-10-08 | SC-D02A·D04A, CT-05 | TR-55 |
+| FR-3.1~3.3, US-04 | DM-07, BR-05-01, DM-31 | SC-D05, SC-05-01, FE-04-01 | TR-59 |
+
+### 12.2 추가 회귀 검증
+
+| ID | 입력/행동 | 기대 결과 |
+|---|---|---|
+| TR-49 | current WASTE Context를 PRODUCTIVE로 수정 | history는 보존되고 current Waste/Saved에는 대체된 WASTE가 없음 |
+| TR-50 | 다중 Session·Activity의 상충 evidence와 사용자 PRODUCTIVE 확정 | evidence는 보존, canonical final decision 하나, WASTE 미집계 |
+| TR-51 | 정상 coverage의 진행 중 23/25시간 날짜와 중간 coverage 공백 날짜 | 전자는 partial `IN_PROGRESS`, 후자는 `DATA_INCOMPLETE`; 둘 다 Baseline valid day 아님 |
+| TR-52 | 동일 MeasurementDay 재시도와 과거 Context 수정 | 재시도는 valid day 1회, 새 source revision만 upsert·미승인 후보 재구성 |
+| TR-53 | 120분 lifetime Goal과 30분 period report | Goal은 120분 유지, report만 30분; UsageStats incomplete가 lifetime을 숨기지 않음 |
+| TR-54 | representative 선택 뒤 query clipping/새 경계 | 같은 source set child는 대표 상속, 달라진 부분만 재선택 |
+| TR-55 | retention expiry·full deletion 중 device/backup 한쪽 실패 | registry 전체가 삭제 대상, 하나라도 실패하면 완료 false |
+| TR-56 | incomplete/observing/saved-zero 각각과 pending overlap 동시 | rate reason precedence와 별도 pending 상태 |
+| TR-57 | 복수 관계·자정 clipping Timeline | canonical row duration union이 실제 경과시간 이하, UI 계산 없음 |
+| TR-58 | 서로 다른 PRODUCTIVE answer와 OTHER final enum | answer·결정 시각·OTHER enum provenance 표시 |
+| TR-59 | InstalledAppSource unavailable와 신규 App | 기존 분류 보존, 신규는 UNCLASSIFIED+discoveredAt만 가짐 |
+| TR-60 | timer completion 성공/실패 | Recovered CREATED와 timer DELETED가 같은 change set, 실패 시 둘 다 미노출 |
+| TR-61 | 제공 계약·UI action 목록 검사 | cancel operation/action 없음, completion만 timer 제거 |
+| TR-62 | Context/App 변경 후 재계산 성공·실패 | source/computed revision, FRESH/STALE/FAILED, 마지막 성공 snapshot 정확 표시 |
+
+### 12.3 Gate 2 보완 완료 검사
+
+- [x] current-effective Context revision과 superseded WASTE 제외를 설계·계약·TR-49에 연결했다.
+- [x] 다중 관계를 final canonical decision 하나로 축약하고 TR-50에 연결했다.
+- [x] partial coverage/MeasurementDay upsert를 TR-51·52에 연결했다.
+- [x] lifetime Goal·period report 및 stable overlap resolution을 TR-53·54에 연결했다.
+- [x] 새 기준·파생 행동 데이터의 보관·백업·전체 삭제를 TR-55에 연결했다.
+- [x] Rate reason precedence, canonical Timeline, provenance, InstalledAppSource, DELETED, cancel 제거, freshness를 TR-56~62에 연결했다.

@@ -33,3 +33,10 @@
 - 상태 전환: `PLAN_AND_QUESTIONS` → `ARTIFACT_GENERATION`
 - 다음 행동: STEP 01 기능 설계 본 산출물 5개 생성 및 Gate 2 검증
 - 코드 상태: `src/`, Java 코드, 빌드 설정 생성은 계속 차단한다.
+## 2026-08-26 — UOW-01 CONSTRUCTION STEP 01 완료 및 Gate 2 승인
+
+- 대상: `timeback-mvp` 내부 `track-domain-engine` 책임(APP-05~APP-09)의 기능 설계 5개 문서.
+- Gate 1 승인 Q1~Q14를 유지한 채 semantic review High 7·Medium 8을 보완했다: current-effective Context revision, 다중 관계 canonical decision, partial coverage·MeasurementDay revision, lifetime Goal/period summary 분리, 안정적인 overlap resolution, 파생 행동 데이터 lifecycle, rate precedence, canonical Timeline/provenance, InstalledAppSource, timer deletion 통지, 취소 제거, freshness/revision.
+- 검증: `validate-markdown.ps1`로 `domain-model.md`, `business-rules.md`, `service-contracts.md`, `frontend-components.md`, `traceability.md`를 통과했고, semantic reviewer 재검토 verdict는 `APPROVED`였다. Gate 2 blocker는 없다.
+- Gate 2: 사용자의 STEP 01 전체 과정 마무리 요청을 `2) 다음 단계로` 승인으로 기록한다.
+- 범위: 새 Java·Kotlin·빌드 구현 파일은 생성하지 않았으며, 실제 구현은 STEP 02의 기술 결정 Gate 이후에만 시작한다.
