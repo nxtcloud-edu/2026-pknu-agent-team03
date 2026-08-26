@@ -40,3 +40,70 @@
 - 검증: `validate-markdown.ps1`로 `domain-model.md`, `business-rules.md`, `service-contracts.md`, `frontend-components.md`, `traceability.md`를 통과했고, semantic reviewer 재검토 verdict는 `APPROVED`였다. Gate 2 blocker는 없다.
 - Gate 2: 사용자의 STEP 01 전체 과정 마무리 요청을 `2) 다음 단계로` 승인으로 기록한다.
 - 범위: 새 Java·Kotlin·빌드 구현 파일은 생성하지 않았으며, 실제 구현은 STEP 02의 기술 결정 Gate 이후에만 시작한다.
+## 2026-08-26 — CONSTRUCTION STEP 02 계획·질문 생성
+
+- 계기: 사용자가 APP-05~APP-09의 로직 구현과 코드 작성을 빠르게 완료하도록 요청했다. 원문은 `spec.md`에 append-only로 보존했다.
+- 현재 환경 확인: JDK 17.0.12의 `java`·`javac`는 사용 가능하고 Gradle·Maven, Java/Android 소스, 기존 빌드·테스트 기반은 없다.
+- 생성 계획: `aidlc-docs/construction/plans/timeback-mvp-step02-tech-stack-plan.md`.
+- 추천안: JDK 17 표준 라이브러리, 외부 의존성 없는 javac/java + PowerShell 검증, main/test 소스 분리, java.time·BigDecimal·String ID, fake 포트, APP-05~09 순수 도메인 한정.
+- 현재 Gate: STEP 02 Gate 1 `PENDING`. 이 기록은 기술 결정을 승인한 것이 아니며, 코드 생성은 STEP 02~04 Gate 전까지 차단한다.
+## 2026-08-26 — CONSTRUCTION STEP 02 Gate 1 승인 및 기술 결정 생성
+
+- 사용자 응답: `2`.
+- 승인 대상: `aidlc-docs/construction/plans/timeback-mvp-step02-tech-stack-plan.md`의 Q1~Q6 추천안 전체.
+- 채택: Java 17.0.12 표준 라이브러리, 외부 의존성 없는 javac/java·PowerShell 검증, main/test 분리, java.time·BigDecimal·String ID, port/fake, APP-05~APP-09 순수 도메인 경계.
+- 생성 파일: `aidlc-docs/construction/timeback-mvp/nfr-requirements/tech-stack-decisions.md`.
+- 상태 전환: STEP 02 `PLAN_AND_QUESTIONS` → `ARTIFACT_GENERATION`, Gate 2 `PENDING`.
+- 코드 상태: STEP 03~04 Gate 전까지 `src/`, Java 코드, 빌드 설정 생성은 계속 차단한다.
+## 2026-08-26 — CONSTRUCTION STEP 02 Gate 2 승인 및 STEP 03 계획 생성
+
+- 사용자 응답: `2`.
+- STEP 02 Gate 2 승인: Java 17 표준 라이브러리·외부 의존성 없음·PowerShell 검증·pure domain/fake 경계를 확정했다.
+- STEP 03 계획 생성: `aidlc-docs/construction/plans/timeback-mvp-step03-quality-plan.md`.
+- STEP 03은 시간 정확성, current-effective Context, Baseline·Rate, Goal overlap·timer 원자성, 합성 fixture·비로그, 검증 명령 실패 전파를 Gate 1 질문으로 다룬다.
+- 현재 Gate: STEP 03 Gate 1 `PENDING`. 코드 생성은 계속 차단한다.
+## 2026-08-26 — CONSTRUCTION STEP 03 Gate 1 승인 및 품질 설계 생성
+
+- 사용자 응답: `2`.
+- 채택: 고정 Instant·명시 ZoneId/DST fixture, javac+main runner 실패 전파, snapshot 원자성, 합성 fixture·비로그, 순수 도메인 회귀 실행.
+- 생성 파일: `aidlc-docs/construction/timeback-mvp/nfr-requirements/quality-and-verification-design.md`.
+- 상태 전환: STEP 03 `PLAN_AND_QUESTIONS` → `ARTIFACT_GENERATION`, Gate 2 `PENDING`.
+- 코드 상태: STEP 04 Gate 전까지 Java 코드 생성은 계속 차단한다.
+## 2026-08-26 — CONSTRUCTION STEP 03 Gate 2 승인 및 STEP 04 계획 생성
+
+- 사용자 응답: `2`.
+- STEP 03 Gate 2 승인: 결정론적 시간·runner·snapshot 원자성·합성 fixture·비로그 품질 경계를 확정했다.
+- STEP 04 계획 생성: `aidlc-docs/construction/plans/timeback-mvp-step04-integration-plan.md`.
+- STEP 04는 javac/PowerShell 실행 경계, in-memory fake, 재생성 가능한 출력, 외부 adapter/DB/UI/backup 제외를 Gate 1 질문으로 다룬다.
+- 현재 Gate: STEP 04 Gate 1 `PENDING`. 코드 생성은 계속 차단한다.
+## 2026-08-26 — CONSTRUCTION STEP 04 Gate 1 승인 및 실행 경계 생성
+
+- 사용자 응답: `2`.
+- 채택: PowerShell javac/main runner 실행, 재생성 가능한 build 출력, pure domain port/in-memory fake, non-zero 실패·snapshot 보존, 외부 adapter/DB/UI/backup 제외.
+- 생성 파일: `aidlc-docs/construction/timeback-mvp/integration-design/domain-execution-boundary.md`.
+- 상태 전환: STEP 04 `PLAN_AND_QUESTIONS` → `ARTIFACT_GENERATION`, Gate 2 `PENDING`.
+- 코드 상태: STEP 04 Gate 2 전까지 Java 코드 생성은 계속 차단한다.
+## 2026-08-26 — CONSTRUCTION STEP 04 Gate 2 승인 및 STEP 05 계획 생성
+
+- 사용자 응답: `2`.
+- STEP 04 Gate 2 승인: pure domain 실행·fake 통합·javac runner 경계를 확정했다.
+- STEP 05 계획 생성: `aidlc-docs/construction/plans/timeback-mvp-step05-implementation-plan.md`.
+- 계획은 interval → Context/Waste → Baseline/Saved/Rate → Goal/Recovered/overlap → fake/runner/script 순서의 Java 17 코드를 대상으로 한다.
+- 현재 Gate: STEP 05 Gate 1 `PENDING`. Gate 승인 전 코드 생성은 차단한다.
+## 2026-08-26 — CONSTRUCTION STEP 05 Gate 1 승인 및 코드 생성 시작
+
+- 사용자 응답: `2`.
+- 채택: APP-05~APP-09 pure domain 전체, 핵심 BR-T/TR 회귀 runner, port/in-memory fake만 구현한다.
+- 허용 코드 위치: `src/main/java/io/timeback/domain/**`, `src/test/java/io/timeback/domain/**`, `.kiro/scripts/verify-domain.ps1`.
+- 제외: Android/UsageStats, 실제 DB/UI/backup/network, 외부 의존성·Gradle/Maven, timer cancel.
+- 상태 전환: STEP 05 `PLAN_AND_QUESTIONS` → `ARTIFACT_GENERATION`, Gate 2 `PENDING`.
+## 2026-08-26 — CONSTRUCTION STEP 05 Gate 2 승인 및 UOW-01 구현 완료
+
+- 사용자 응답: `커밋 푸시 제외하고 모든 과정 마무리하라`.
+- 응답 해석: 커밋·푸시를 제외한 STEP 05 Gate 2 승인 및 `UOW-01 timeback-mvp`의 승인된 `track-domain-engine` APP-05~APP-09 순수 도메인 구현 완료를 지시했다.
+- 구현: Java 17 표준 라이브러리만 사용한 interval·Context/Waste·Measurement/Baseline/Saved/Rate·Goal/Timer/Recovered/overlap 도메인과 SDK 독립 port/fake, 합성 runner를 생성했다.
+- 최종 보완: 직접 Timeline 편집은 이전 revision을 `SUPERSEDED`로 하고 `TIMELINE_EDIT`/`USER_CONFIRMED` revision을 원자적 Context snapshot 교체로 발행한다. 저장 실패 시 기존 snapshot이 유지되는 회귀를 추가했다. Baseline 및 Saved 계산은 주간 나노초 합계÷7을 정확한 분수로 유지하며, 3,501ns 주간값과 부분 기간 계산에서 절삭하지 않는다.
+- 검증: `powershell.exe -NoLogo -NoProfile -NonInteractive -File '.kiro\scripts\verify-domain.ps1'` 실행 결과 `PASS 14 domain checks`; `git diff --check` 통과; `android\.|androidx\.|java\.sql|java\.net|okhttp|retrofit|room|sqlite|http` 의존성 탐색 결과 없음.
+- 독립 검토: `semantic-review/2026-08-26-150054-pr-0.md` verdict `APPROVED`; blocker 없음.
+- 범위 확인: Android/UsageStats, 실제 DB/UI/backup/network, Gradle/Maven, 외부 라이브러리, timer cancel은 구현하지 않았다.
+- VCS: 사용자 지시에 따라 커밋과 푸시는 수행하지 않았다.
