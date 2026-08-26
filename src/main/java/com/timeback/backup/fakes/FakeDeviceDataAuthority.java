@@ -1,6 +1,7 @@
 package com.timeback.backup.fakes;
 
 import com.timeback.backup.contracts.*;
+import com.timeback.backup.port.BackupDataAuthority;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -8,7 +9,7 @@ import java.util.List;
 /**
  * CT-06 테스트 대역 — CT-03 저장 통지 중 백업 트랙이 사용하는 부분.
  */
-public class FakeDeviceDataAuthority {
+public class FakeDeviceDataAuthority implements BackupDataAuthority {
 
     public enum DeleteMode { SUCCESS, PARTIAL_FAILURE, FAILURE }
 

@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/permissionFragment">
+
+    <fragment
+        android:id="@+id/permissionFragment"
+        android:name="com.timeback.ui.feature.permission.PermissionFragment"
+        android:label="Permission" />
+    <fragment android:id="@+id/homeFragment" android:name="com.timeback.ui.feature.home.HomeFragment" android:label="Home" />
+    <fragment android:id="@+id/timelineFragment" android:name="com.timeback.ui.feature.timeline.TimelineFragment" android:label="Timeline" />
+    <fragment android:id="@+id/appManagementFragment" android:name="com.timeback.ui.feature.apps.AppManagementFragment" android:label="Apps" />
+    <fragment android:id="@+id/recoveryFragment" android:name="com.timeback.ui.feature.recovery.RecoveryFragment" android:label="Recovery" />
+    <fragment android:id="@+id/goalsFragment" android:name="com.timeback.ui.feature.goals.GoalsFragment" android:label="Goals" />
+    <fragment android:id="@+id/reportFragment" android:name="com.timeback.ui.feature.report.ReportFragment" android:label="Report" />
+    <fragment android:id="@+id/dataManagementFragment" android:name="com.timeback.ui.feature.datamanagement.DataManagementFragment" android:label="Data" />
+</navigation>

@@ -10,6 +10,8 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
+import com.timeback.R;
+
 import com.timeback.ui.domain.model.ScreenState;
 
 import dagger.hilt.android.AndroidEntryPoint;
@@ -41,8 +43,7 @@ public class GoalsFragment extends Fragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
                              @Nullable Bundle savedInstanceState) {
-        // TODO: return inflater.inflate(R.layout.fragment_goals, container, false);
-        return null;
+        return inflater.inflate(R.layout.fragment_placeholder, container, false);
     }
 
     @Override

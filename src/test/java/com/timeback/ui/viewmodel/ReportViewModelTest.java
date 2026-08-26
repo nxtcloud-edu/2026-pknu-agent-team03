@@ -8,12 +8,14 @@ import com.timeback.ui.feature.report.ReportViewModel;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * ReportViewModel 단위 테스트.
  */
+@ExtendWith(LiveDataTestExtension.class)
 class ReportViewModelTest {
 
     private FakeFeatureGateway gateway;

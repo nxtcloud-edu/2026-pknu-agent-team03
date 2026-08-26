@@ -1,6 +1,7 @@
 package com.timeback.backup.fakes;
 
 import com.timeback.backup.contracts.*;
+import com.timeback.backup.port.BackupBoundary;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,7 +10,7 @@ import java.util.List;
  * CT-06 테스트 대역 — 서버 응답 시뮬레이션.
  * APP-12, APP-13 단위 테스트에서 실제 서버 없이 사용.
  */
-public class FakeBackupBoundary {
+public class FakeBackupBoundary implements BackupBoundary {
 
     public enum BackupMode { ACCEPT_ALL, PARTIAL_FAILURE, OFFLINE, REJECT_ALL }
     public enum DeletionMode { COMPLETE, IN_PROGRESS, FAILED }
@@ -76,7 +77,7 @@ public class FakeBackupBoundary {
         }
     }
 
-    public DeletionStatusResponse readDeletionStatus(String jobId) {
+    public DeletionStatusResponse readDeletionStatus(String anonymousUserId, String jobId) {
         switch (deletionMode) {
             case COMPLETE:
                 return new DeletionStatusResponse(jobId, DeletionStatus.COMPLETED);

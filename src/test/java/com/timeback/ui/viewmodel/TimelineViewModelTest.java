@@ -7,12 +7,14 @@ import com.timeback.ui.feature.timeline.TimelineViewModel;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * TimelineViewModel 단위 테스트.
  */
+@ExtendWith(LiveDataTestExtension.class)
 class TimelineViewModelTest {
 
     private FakeFeatureGateway gateway;

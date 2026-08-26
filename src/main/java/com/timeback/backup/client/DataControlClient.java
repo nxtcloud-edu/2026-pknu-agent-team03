@@ -1,8 +1,8 @@
 package com.timeback.backup.client;
 
 import com.timeback.backup.contracts.*;
-import com.timeback.backup.fakes.FakeBackupBoundary;
-import com.timeback.backup.fakes.FakeDeviceDataAuthority;
+import com.timeback.backup.port.BackupBoundary;
+import com.timeback.backup.port.BackupDataAuthority;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -19,14 +19,14 @@ import java.util.Map;
 public class DataControlClient {
 
     private final String anonymousUserId;
-    private final FakeBackupBoundary boundary;
-    private final FakeDeviceDataAuthority dataAuthority;
+    private final BackupBoundary boundary;
+    private final BackupDataAuthority dataAuthority;
     private final Map<String, DeletionJob> deletionJobs = new HashMap<>();
     private String currentRetentionSelection;
 
     public DataControlClient(String anonymousUserId,
-                             FakeBackupBoundary boundary,
-                             FakeDeviceDataAuthority dataAuthority) {
+                             BackupBoundary boundary,
+                             BackupDataAuthority dataAuthority) {
         this.anonymousUserId = anonymousUserId;
         this.boundary = boundary;
         this.dataAuthority = dataAuthority;
@@ -101,7 +101,7 @@ public class DataControlClient {
 
         // 서버 상태 재확인
         try {
-            DeletionStatusResponse response = boundary.readDeletionStatus(jobId);
+            DeletionStatusResponse response = boundary.readDeletionStatus(anonymousUserId, jobId);
             job.setServerStatus(response.getServerStatus());
         } catch (RuntimeException e) {
             job.setServerStatus(DeletionStatus.FAILED);
