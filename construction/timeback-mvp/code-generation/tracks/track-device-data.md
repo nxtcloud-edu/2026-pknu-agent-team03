@@ -35,4 +35,4 @@ Room 실제 저장 구현은 의존성·앱 모듈을 네 트랙이 공유해야
 
 ## 4. 실행 명령
 
-현재 저장소에는 공통 Gradle 루트가 아직 없으므로 독립 검증은 Android Studio 내장 Kotlin 컴파일러와 SDK 34 `android.jar`를 사용한다. 네 트랙 통합 뒤에는 공통 Gradle의 `verify-data`, `verify-device`, `verify-all` 작업으로 대체한다.
+현재 저장소에는 공통 Gradle 루트가 아직 없으므로 독립 검증은 JDK 17 호환 `javac --release 17`과 SDK 34 `android.jar`를 사용한다. 네 트랙 통합 뒤에는 공통 Gradle의 `verify-data`, `verify-device`, `verify-all` 작업으로 대체한다.

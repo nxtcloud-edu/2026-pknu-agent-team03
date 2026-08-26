@@ -192,7 +192,7 @@ CP-0 공통 섹션과 다른 트랙의 고유 섹션은 직접 수정하지 않�
 
 | 단계 | 결과 | 산출물·증거 |
 |---|---|---|
-| STEP 02 | 완료 후보 | `nfr-requirements/tracks/track-device-data.md` — Kotlin, Android 14, Room, Coroutines, 품질 조건 |
+| STEP 02 | 완료 후보 | `nfr-requirements/tracks/track-device-data.md` — Java 17, Android 14, Room, WorkManager, 품질 조건 |
 | STEP 03 | 완료 후보 | `nfr-design/tracks/track-device-data.md` — OS 포트, 원자 수집·교체, 오류·테스트 설계 |
 | STEP 04 | 적용 조건상 건너뜀 | `infrastructure-design/tracks/track-device-data.md` — 순수 Android 내부 트랙 근거와 통합 검토 |
 | STEP 05 | 독립 완료 후보 | `src/main/java/com/timeback/device`, `src/test/java/com/timeback/device` — Android SDK 34 컴파일과 자동 검증 |

@@ -31,21 +31,21 @@
 
 | 영역 | 결정 | 조건 |
 |---|---|---|
-| 앱 언어 | Kotlin | 2.0 이상, Java 17 바이트코드 호환 |
+| 앱 언어 | Java | 17 이상, Kotlin 기반 track-ui와 JVM 상호운용 |
 | Android 기준 | compile/target SDK 34, min SDK 34 | 요구사항의 Android 14 이상 |
 | OS 사건 | `UsageStatsManager.queryEvents()` | `ACTIVITY_RESUMED`/`ACTIVITY_PAUSED`와 호환 foreground/background 사건만 매핑 |
 | 권한 경계 | `AppOpsManager` + `Settings.ACTION_USAGE_ACCESS_SETTINGS` | 설정 열기 성공과 권한 허용을 구분 |
 | 로컬 저장 | Room 2.6 이상, SQLite WAL | 사용자·종류·기간 인덱스, `withTransaction` 원자성 |
-| 비동기 실행 | Kotlin Coroutines + WorkManager | 새로고침은 즉시 실행, 후속 증분 수집은 고유 작업으로 직렬화 |
+| 비동기 실행 | Java Executor API + WorkManager | 새로고침은 즉시 실행, 후속 증분 수집은 고유 작업으로 직렬화 |
 | 시간 | `java.time.Instant`, `ZoneId`, `ZonedDateTime` | epoch millis 저장, OS-05에서만 현지 경계 계산 |
-| 직렬화 | Kotlinx Serialization | 로컬 변경 사본과 백업 어댑터에만 사용 |
-| 단위 테스트 | Kotlin test/JUnit 5 | 순수 JVM 업무 규칙과 가짜 포트 |
+| 직렬화 | Gson | 로컬 변경 사본과 백업 어댑터에만 사용 |
+| 단위 테스트 | Java assertions/JUnit 5 | 순수 JVM 업무 규칙과 가짜 포트 |
 | 저장 통합 테스트 | Room in-memory + Robolectric/AndroidX Test | 실제 트랜잭션·조회·삭제 검증 |
 | 실기기 테스트 | Android instrumentation + 수동 체크리스트 | NFR-3.3 완료 증거 |
 
 ### 선택 근거
 
-- Kotlin은 `track-ui`가 정한 앱 언어와 일치하며 Android API 어댑터와 순수 업무 규칙을 같은 모듈에서 분리할 수 있다.
+- Java 17은 팀의 device-data 구현 언어 결정과 일치하며 `record`·`sealed interface`로 기존 계약 구조를 유지한다. Kotlin 기반 `track-ui`와는 JVM 경계에서 상호운용한다.
 - Room은 APP-11의 트랜잭션, 사용자 범위 조회, 기간 인덱스, 스키마 마이그레이션을 명시적으로 검증할 수 있다.
 - WorkManager는 프로세스 재시작 뒤에도 증분 수집을 재개할 수 있지만, 유일 작업 이름을 사용자 범위별로 두어 동시에 같은 체크포인트를 갱신하지 않는다.
 - `java.time` 경계 계산은 DST가 있는 현지 날짜도 절대 시각 구간으로 바꾸므로 고정 24시간 가정을 제거한다.
@@ -63,4 +63,4 @@
 |---|---|
 | 실제 제조사별 UsageEvent 차이 | 가짜 경계로 코드 진행, STEP 06 실기기 미완료로 유지 |
 | UI·백업 트랙의 CT 모델 차이 | 트랙 내부 타입을 고정하고 CP 통합 때 명시적 어댑터 작성 |
-| Room/WorkManager 의존성 미병합 | 순수 Kotlin 메모리 구현으로 계약 검증, Android 저장 구현은 통합 빌드에서 연결 |
+| Room/WorkManager 의존성 미병합 | 순수 Java 메모리 구현으로 계약 검증, Android 저장 구현은 통합 빌드에서 연결 |
