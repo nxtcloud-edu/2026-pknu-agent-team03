@@ -105,6 +105,13 @@ class BackupHttpIntegrationTest {
         assertThat(blankIdentity.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
+    @Test
+    void demoApiIsNotExposedByDefault() {
+        ResponseEntity<String> response = http.getForEntity(url("/demo-api/goals"), String.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
+
     private JsonNode getJson(String path) throws Exception {
         ResponseEntity<String> response = http.getForEntity(url(path), String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);

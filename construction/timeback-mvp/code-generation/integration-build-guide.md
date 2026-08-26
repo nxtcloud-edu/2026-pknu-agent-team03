@@ -20,9 +20,9 @@
 - `verifyBackup`: backup·삭제 15개 회귀
 - `verifyConstructionIntegration`: device→domain→APP-11→backup→전체 삭제 10개 통합 회귀
 - `testDebugUnitTest`: UI ViewModel 26개, Retrofit 2개, Room 5개 회귀
-- `server:test`: Spring Boot/H2 HTTP 3개 통합 회귀
+- `server:test`: Spring Boot/H2 실제 HTTP·기본 프로필 4개, 웹 합성 데모 3개 통합 회귀
 
-총 88개 자동 검증을 실행한다.
+총 92개 자동 검증을 실행한다.
 
 ## 디버그 APK
 
@@ -66,6 +66,19 @@ Dockerfile의 서버 전용 빌드는 Android SDK에 의존하지 않는다. 컨
 
 Android emulator의 debug 앱은 `http://10.0.2.2:8080/`을 사용한다. 평문 HTTP 허용은 debug
 Manifest에만 있으며 release는 실제 HTTPS 주소와 인증서가 결정되기 전 실패 폐쇄한다.
+
+## 선택적 웹 합성 데모
+
+PR #8 웹 화면은 Flask가 아니라 같은 Spring Boot JAR의 명시적 `demo` 프로필로 실행한다.
+
+```bash
+./gradlew --no-daemon :server:bootJar
+java -jar server/build/libs/server-0.1.0.jar --spring.profiles.active=demo
+```
+
+`http://localhost:8080/demo/index.html`을 연다. `/demo-api/**`는 합성 메모리 데이터 전용이며
+실제 CT-05 `/api/**`, Android Room, 기기 삭제 상태를 대신하지 않는다. 기본 프로필에서는 데모
+API가 노출되지 않는다.
 
 ## 현재 앱 동작 경계
 

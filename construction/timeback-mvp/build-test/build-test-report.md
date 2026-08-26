@@ -7,10 +7,11 @@
 - Spring Boot/H2 HTTP 통합: **통과**
 - Android debug APK: **생성·lint 통과**
 - Android 14 이상 실기기: **미실행 — 연결 기기 없음**
-- UOW 최종 상태: **실제 기기 OS-04/NFR-3.3 확인 전 `INTEGRATION_IN_PROGRESS` 유지**
+- UOW 최종 상태: **`CONSTRUCTION_COMPLETE_WITH_DEVICE_FOLLOWUP`**
 
-실제 기기가 없는 경우 수동 체크리스트와 미완료 상태를 남길 수 있다는 UOW STEP 06 조건은 충족했다.
-다만 OS-04 하드웨어 식별원 자체가 미검증이므로 identity 의존 기능을 실제 완료로 판정하지 않는다.
+실제 기기가 없는 경우 수동 체크리스트와 미완료 상태를 남길 수 있다는 UOW STEP 06 종료 조건을
+충족했다. 따라서 CONSTRUCTION은 종료하되, OS-04 하드웨어 식별원과 identity 의존 기능은 실제
+완료로 판정하지 않고 후속 기기 검증 항목으로 유지한다.
 
 ## 2. 검증 환경
 
@@ -22,7 +23,7 @@
 | 앱 저장 | Room 2.6.1, SQLite WAL |
 | 앱 HTTP | Retrofit 2.11.0 + Gson |
 | 서버 | Spring Boot 3.4.13, H2 |
-| 격리 방식 | 랜덤 포트 Spring 통합 테스트, 실행 JAR 포트 18080, Docker Compose 정의 |
+| 격리 방식 | 랜덤 포트 Spring 통합 테스트, 실제 API JAR 포트 18080, demo 프로필 포트 18081, Docker Compose 정의 |
 
 ## 3. 자동 검증 결과
 
@@ -43,8 +44,9 @@
 | 네 트랙 인프로세스 통합 | 10 | 통과 |
 | Retrofit 네트워크 실패·재시도 | 2 | 통과 |
 | Room 영속 저장·재개·격리·삭제·성능 | 5 | 통과 |
-| Spring Boot/H2 HTTP | 3 | 통과 |
-| **합계** | **88** | **통과** |
+| Spring Boot/H2 HTTP·기본 프로필 격리 | 4 | 통과 |
+| Spring 웹 합성 데모 계약 | 3 | 통과 |
+| **합계** | **92** | **통과** |
 
 Room 성능 검증은 10,000개 UsageEvent와 변경 통지를 한 트랜잭션으로 저장한다. 테스트 케이스 전체
 시간은 3.145초였고, 실제 저장 측정값이 4초 이내인지 테스트에서 단언한다. 기존 ID는 일괄 조회하여
@@ -74,7 +76,8 @@ Room 성능 검증은 10,000개 UsageEvent와 변경 통지를 한 트랜잭션�
 | 파일 | 크기 | SHA-256 |
 |---|---:|---|
 | `app/build/outputs/apk/debug/app-debug.apk` | 약 14 MB | `dc4454749c50383b6c6ef56ce8862b17d02ff1cd8e3b02c583b6244dadbaeda5` |
-| `server/build/libs/server-0.1.0.jar` | 약 23 MB | `265fe10e9990293f24d26f071949da274d46bd13a6b5edced1dd48a6dcc2577c` |
+| `server/build/libs/server-0.1.0.jar` | 약 23 MB | `31437cb784ce578d08b981dec1561a944f7ce8946488bbbf04aff72a3a4bd7fb` |
+| `server/docker/build/libs/timeback-server.jar` | 약 23 MB | `7ebff6a1ef5ebc402f7cb9e01af4b9a68d633bf9930d1d663162e0efd3ddd358` |
 
 ## 5. 실제 HTTP/JDBC 실행 검증
 
@@ -100,7 +103,28 @@ java -jar server/build/libs/server-0.1.0.jar --server.port=18080
 네트워크 503 뒤 동일 `changeId` 재시도는 Retrofit 계약 테스트에서
 `RETRYABLE_FAILURE → ACCEPTED`로 확인했다. 서버는 요청 본문과 익명 ID를 로그에 출력하지 않는다.
 
-## 6. Docker 검증
+## 6. PR #8 웹 대시보드 통합 보정
+
+PR #8은 파일 충돌 없이 병합됐지만 Python/Flask 메모리 서버와 실제 삭제를 수행하지 않는 완료 응답이
+Java/Spring·CT-05 계약과 충돌했다. 소스 수정 전
+`construction/plans/timeback-mvp-step06-web-dashboard-reconciliation-plan.md`를 작성하고 다음과 같이
+통합했다.
+
+- Flask 서버를 제거하고 Java Spring `demo` 프로필로 같은 웹 기능을 옮겼다.
+- 합성 데모 API를 `/demo-api/**`로 격리했으며 실제 CT-05 `/api/**`와 공유하지 않는다.
+- 기본·Docker 프로필에서 데모 API는 404이며 명시적 `demo` 프로필에서만 활성화된다.
+- 화면에 합성 데이터임을 표시하고, 삭제는 `deviceStatus=PENDING`, `serverStatus=COMPLETED`로 응답한다.
+- 실행 JAR 포트 18081에서 `/demo/index.html` 200, Timeline 7건, 삭제 상태를 직접 확인했다.
+
+데모 실행:
+
+```bash
+java -jar server/build/libs/server-0.1.0.jar \
+  --spring.profiles.active=demo \
+  --server.port=18081
+```
+
+## 7. Docker 검증
 
 ```bash
 docker compose config
@@ -121,7 +145,7 @@ Docker 데몬이 준비되면 다음으로 반복할 수 있다.
 docker compose up --build --abort-on-container-exit
 ```
 
-## 7. CP 체크포인트
+## 8. CP 체크포인트
 
 | 체크포인트 | 상태 | 증거 |
 |---|---|---|
@@ -129,9 +153,9 @@ docker compose up --build --abort-on-container-exit
 | CP-2 M2 Baseline·리포트 | 자동 검증 통과 | 7일 관찰, 부분 coverage, Saved, UI 상태 |
 | CP-3 M3 목표·회수 | 자동 검증 통과 | 목표, timer, 중첩, 대표 목표, 회수율 |
 | CP-4 M4 백업·통제 | HTTP/H2 통과 | 멱등 백업, 실패 후 재시도, 보관, 양측 삭제 계약 |
-| CP-5 전체 통합 | 부분 통과 | 88개 자동 검증·APK·서버 JAR 통과, 실제 기기만 미실행 |
+| CP-5 전체 통합 | 조건부 완료 | 92개 자동 검증·APK·서버 JAR·웹 데모 통과, 실기기는 승인된 후속 검증 경계 |
 
-## 8. 실제 기기 미완료 상태
+## 9. 실제 기기 후속 검증 상태
 
 Android SDK의 `adb devices -l` 결과 연결 기기가 없었다. 따라서 다음은 통과로 기록하지 않는다.
 
@@ -143,7 +167,18 @@ Android SDK의 `adb devices -l` 결과 연결 기기가 없었다. 따라서 다
 수동 절차는 `construction/timeback-mvp/code-generation/tracks/device-data-android-checklist.md`를 사용한다.
 OS-04 승인 전 production gateway는 `IDENTITY_UNAVAILABLE`로 실패 폐쇄하며 임의 식별자를 생성하지 않는다.
 
-## 9. 재현 명령
+## 10. STEP 06 종료 판정
+
+- STEP 01–05 통합 결과와 CP-1–CP-4 순차 증거가 존재한다.
+- `build-debug`, `verify-all`, 설치 APK, 실행 JAR, 전체 소스, 검증 요약이 존재한다.
+- 격리 서버에서 백업·재시도·보관·삭제가 통과했다.
+- 실제 기기 부재 시 요구되는 수동 체크리스트와 NFR-3.3 미완료 상태를 남겼다.
+- PR #8의 중복 런타임과 삭제 의미 충돌을 Java/Spring 선택적 데모 경계로 보정했다.
+
+따라서 `unit-of-work.md`에 별도 STEP 07이 없음을 확인하고 CONSTRUCTION STEP 06 및 UOW-01의
+Construction 작업을 `CONSTRUCTION_COMPLETE_WITH_DEVICE_FOLLOWUP`으로 종료한다.
+
+## 11. 재현 명령
 
 ```bash
 ./gradlew --no-daemon verifyAll
