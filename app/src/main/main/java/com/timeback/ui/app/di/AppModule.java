@@ -20,6 +20,6 @@ public class AppModule {
     @Provides
     @Singleton
     public FeatureGateway provideFeatureGateway() {
-        return new FakeFeatureGateway();
+        return new MockDataGateway();
     }
 }
