@@ -107,3 +107,17 @@
 - 독립 검토: `semantic-review/2026-08-26-150054-pr-0.md` verdict `APPROVED`; blocker 없음.
 - 범위 확인: Android/UsageStats, 실제 DB/UI/backup/network, Gradle/Maven, 외부 라이브러리, timer cancel은 구현하지 않았다.
 - VCS: 사용자 지시에 따라 커밋과 푸시는 수행하지 않았다.
+
+## 2026-08-26 — 네 트랙 선행 개발 결과 통합·빌드 보정
+
+- 사용자 작업 방식 변경: 네 트랙이 STEP 02–05를 독립 완료한 뒤 병합하고, 계약·빌드 문제를 통합 시점에 보정한다.
+- 선행 문서: `construction/plans/timeback-mvp-track-integration-plan.md`를 코드 수정 전에 생성했다.
+- 병합 상태: PR #1–#5의 유효 결과가 `main`에 병합된 상태를 입력으로 사용했다.
+- 문서 보정: PR #1 병합 과정에서 비어 버린 UI·backup NFR·기술 스택 파일을 Java 17/Fragment 통합본으로 복구했다.
+- 계약 보정: device AppSession→domain facade, domain→APP-11 저장, APP-11 CommittedChange→backup 포트를 연결했다.
+- 책임 보정: backup production client의 구체 Fake 의존과 UI production DI의 Fake 고정 주입을 제거했다.
+- 위험 처리: OS-04 검증 전에는 production gateway가 `IDENTITY_UNAVAILABLE`를 반환하며 임의 식별자를 만들지 않는다.
+- 빌드 보정: device-core/domain/backup/app Gradle 모듈, Android Manifest·Navigation·최소 리소스, wrapper를 추가했다.
+- 검증: device 13, domain 14, backup 15, UI 26, 통합 10개 회귀와 `assembleDebug`가 통과했다.
+- 산출물: `app/build/outputs/apk/debug/app-debug.apk`.
+- 미완료: 실제 Android 기기, OS-04 식별원, Room 영속 저장, Spring Boot/H2 HTTP·Docker 격리 통합.

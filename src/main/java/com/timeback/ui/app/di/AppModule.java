@@ -1,17 +1,20 @@
 package com.timeback.ui.app.di;
 
+import android.content.Context;
+import com.timeback.device.contract.UsageAccessGateway;
+import com.timeback.device.os.AndroidUsageAccessGateway;
 import com.timeback.ui.domain.gateway.FeatureGateway;
-import com.timeback.ui.fake.FakeFeatureGateway;
+import com.timeback.ui.integration.ProductionFeatureGateway;
 
 import javax.inject.Singleton;
+import dagger.hilt.android.qualifiers.ApplicationContext;
 import dagger.Module;
 import dagger.Provides;
 import dagger.hilt.InstallIn;
 import dagger.hilt.components.SingletonComponent;
 
 /**
- * Hilt DI 모듈 — FakeFeatureGateway를 FeatureGateway로 제공.
- * 프로덕션에서는 실제 구현으로 교체한다.
+ * Production Hilt composition. Fake gateways are instantiated only by tests.
  */
 @Module
 @InstallIn(SingletonComponent.class)
@@ -19,7 +22,14 @@ public class AppModule {
 
     @Provides
     @Singleton
-    public FeatureGateway provideFeatureGateway() {
-        return new FakeFeatureGateway();
+    public UsageAccessGateway provideUsageAccessGateway(@ApplicationContext Context context) {
+        return new AndroidUsageAccessGateway(context);
+    }
+
+    @Provides
+    @Singleton
+    public FeatureGateway provideFeatureGateway(UsageAccessGateway usageAccessGateway) {
+        // OS-04 identity verification is still pending; do not invent a fallback identity.
+        return new ProductionFeatureGateway(usageAccessGateway, false);
     }
 }

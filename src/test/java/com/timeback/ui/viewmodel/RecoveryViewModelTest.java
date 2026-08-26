@@ -7,12 +7,14 @@ import com.timeback.ui.feature.recovery.RecoveryViewModel;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * RecoveryViewModel 단위 테스트.
  */
+@ExtendWith(LiveDataTestExtension.class)
 class RecoveryViewModelTest {
 
     private FakeFeatureGateway gateway;

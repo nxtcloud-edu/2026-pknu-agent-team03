@@ -9,12 +9,14 @@ import com.timeback.ui.feature.goals.GoalsViewModel;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * GoalsViewModel 단위 테스트.
  */
+@ExtendWith(LiveDataTestExtension.class)
 class GoalsViewModelTest {
 
     private FakeFeatureGateway gateway;

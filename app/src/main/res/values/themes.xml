@@ -1,0 +1,3 @@
+<resources>
+    <style name="Theme.TimeBack" parent="Theme.AppCompat.DayNight.NoActionBar" />
+</resources>

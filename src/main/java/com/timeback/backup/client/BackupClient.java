@@ -1,12 +1,11 @@
 package com.timeback.backup.client;
 
 import com.timeback.backup.contracts.*;
-import com.timeback.backup.fakes.FakeBackupBoundary;
-import com.timeback.backup.fakes.FakeDeviceDataAuthority;
+import com.timeback.backup.port.BackupBoundary;
+import com.timeback.backup.port.BackupDataAuthority;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 /**
  * APP-12 백업 클라이언트.
@@ -21,13 +20,13 @@ import java.util.UUID;
 public class BackupClient {
 
     private final String anonymousUserId;
-    private final FakeBackupBoundary boundary;
-    private final FakeDeviceDataAuthority dataAuthority;
+    private final BackupBoundary boundary;
+    private final BackupDataAuthority dataAuthority;
     private final List<BackupChange> pendingChanges = new ArrayList<>();
 
     public BackupClient(String anonymousUserId,
-                        FakeBackupBoundary boundary,
-                        FakeDeviceDataAuthority dataAuthority) {
+                        BackupBoundary boundary,
+                        BackupDataAuthority dataAuthority) {
         this.anonymousUserId = anonymousUserId;
         this.boundary = boundary;
         this.dataAuthority = dataAuthority;
@@ -40,7 +39,7 @@ public class BackupClient {
         List<CommittedChange> changes = dataAuthority.readCommittedChanges();
         for (CommittedChange c : changes) {
             BackupChange bc = new BackupChange(
-                    UUID.randomUUID().toString(),
+                    c.getChangeId(),
                     c.getEntityType(),
                     c.getEntityId(),
                     c.getOperation(),

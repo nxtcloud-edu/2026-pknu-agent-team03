@@ -8,6 +8,7 @@ import com.timeback.ui.feature.permission.PermissionViewModel;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -18,6 +19,7 @@ import static org.junit.jupiter.api.Assertions.*;
  * PermissionViewModel 단위 테스트.
  * FakeFeatureGateway를 주입하여 상태 전이를 검증한다.
  */
+@ExtendWith(LiveDataTestExtension.class)
 class PermissionViewModelTest {
 
     private FakeFeatureGateway gateway;
