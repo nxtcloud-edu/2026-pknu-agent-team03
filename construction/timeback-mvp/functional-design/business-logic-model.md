@@ -566,4 +566,4 @@ ReconstructSessions(DataOwnerScope, affectedWindow)
 | `track-ui` | `AccessState`, 수집·재구성 새로고침 결과와 오류 분류 | 권한 허용과 설정 이동 성공을 같은 상태로 보지 않음 |
 | `track-backup-server` | 사용자 범위와 순서를 보존하는 변경 통지 페이지 제안 | CT-03 합의 뒤 로컬 커서 진행과 원격 백업 성공 커서를 구분 |
 
-`track-device-data`의 STEP 01 상세 기능 설계는 완료 후보지만, 단일 작업 단위의 나머지 트랙 상세와 게이트 2 승인이 없으므로 STEP 02를 시작하지 않는다.
+이 문장을 작성한 시점에는 `track-device-data`의 STEP 01 상세만 완료 후보로 두었다. 이후 팀의 트랙별 병렬 진행 방식이 확인되어 공식 UOW 게이트와 별개로 device-data의 STEP 02–05 기여를 진행했으며, 최신 상태는 `functional-design/tracks/track-device-data.md` §13을 따른다.

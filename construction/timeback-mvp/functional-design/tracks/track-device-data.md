@@ -2,18 +2,18 @@
 
 ## 1. 문서 목적과 현재 상태
 
-이 문서는 `timeback-mvp` CONSTRUCTION STEP 01 안에서 기기 데이터 트랙을 담당하는 팀원의 진행 기준이다. 별도 작업 단위나 별도 AI-DLC 단계가 아니다.
+이 문서는 `timeback-mvp` CONSTRUCTION에서 기기 데이터 트랙을 담당하는 팀원의 진행 기준이다. 별도 작업 단위나 별도 AI-DLC 단계가 아니다.
 
 | 항목 | 값 |
 |---|---|
 | 브랜치 | `feature/track-device-data` |
 | 책임 트랙 | `track-device-data` |
 | 담당자 | 1번 팀원 |
-| 문서 상태 | STEP 01 상세 기능 설계 완료 후보 |
-| 실제 트랙 진행 | 상세 설계 작성 완료 · 계약 검토와 통합 대기 |
+| 문서 상태 | STEP 01–05 트랙 산출물 완료 후보 |
+| 실제 트랙 진행 | 상세·NFR·기술 설계와 독립 코드·JVM 검증 완료 · 실제 통합 대기 |
 | 공통 선행 조건 | CP-0의 CT-01–CT-06과 이 문서가 들어간 공통 기준 커밋 |
 | 현재 Git 경계 | `feature/track-device-data`에서 PR 제출 대상이며 `main` 병합은 대기 |
-| 종료 판정 | 트랙 체크리스트 충족, CT 변경 합의와 실제 통합은 STEP 01 통합 검토에서 완료 |
+| 종료 판정 | 트랙 독립 체크리스트 충족, CT 변경 합의·Room·다른 트랙 실제 연결은 통합 검토에서 완료 |
 
 ## 2. 소유 범위
 
@@ -186,4 +186,15 @@ CP-0 공통 섹션과 다른 트랙의 고유 섹션은 직접 수정하지 않�
 | Android 14 이상 권한·UsageEvent 실기기 검증 | 미실행·통과로 기록하지 않음 | STEP 06 또는 승인된 기기 검증 시점 |
 | `feature/track-device-data` PR 제출과 `main` 병합 | PR 제출 대상·병합 대기 | 팀 Git 절차에 따라 수행 |
 
-현재 판정은 `track-device-data STEP 01 상세 기능 설계 완료 후보`다. CT 변경 합의, 다른 트랙 결과, 단일 게이트 2 승인이 남아 있으므로 STEP 01 전체 완료나 STEP 02 시작으로 표시하지 않는다.
+## 13. STEP 02–05 병렬 진행 갱신
+
+다른 책임 트랙이 공통 계약과 가짜 구현을 사용해 자기 STEP 02–05 기여를 독립 완성한 진행 방식에 맞춰, `track-device-data`도 공식 UOW 게이트와 트랙 작업을 구분해 후속 단계를 진행했다. 앞 절의 “STEP 02 시작 대기”는 STEP 01 작성 당시의 판단이며 이 절이 현재 상태를 대체한다.
+
+| 단계 | 결과 | 산출물·증거 |
+|---|---|---|
+| STEP 02 | 완료 후보 | `nfr-requirements/tracks/track-device-data.md` — Kotlin, Android 14, Room, Coroutines, 품질 조건 |
+| STEP 03 | 완료 후보 | `nfr-design/tracks/track-device-data.md` — OS 포트, 원자 수집·교체, 오류·테스트 설계 |
+| STEP 04 | 적용 조건상 건너뜀 | `infrastructure-design/tracks/track-device-data.md` — 순수 Android 내부 트랙 근거와 통합 검토 |
+| STEP 05 | 독립 완료 후보 | `src/main/java/com/timeback/device`, `src/test/java/com/timeback/device` — Android SDK 34 컴파일과 자동 검증 |
+
+현재 판정은 `track-device-data STEP 01–05 독립 완료 후보`다. 이는 `timeback-mvp`의 단계별 공식 게이트를 네 번 통과했다는 뜻이 아니다. CT-03 확정, Room 실제 저장, UI·도메인·백업 어댑터, 실제 Android 기기 NFR-3.3과 전체 Gradle 빌드는 네 트랙 병합 후 통합해야 한다.
